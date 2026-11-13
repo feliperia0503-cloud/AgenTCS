@@ -97,7 +97,7 @@ class CopilotService:
         source_language = (source_language or "").strip() or sources.dominant_language(raw)
         sanitized, findings = Sanitizer().sanitize_files(raw)
         for f in sanitized:
-            f.language = sources.language_of(f.path)[0]
+            f.language = sources.language_of(f.path, f.content)[0]
         ref = (f"{repo_url.strip()}@{(branch or 'rama por defecto').strip()}" if (repo_url or "").strip() and
                not files else ", ".join(name for name, _ in files[:5]))
         state = RunState(run_id=run_id, mode=RunMode.REAL, source_language=source_language,

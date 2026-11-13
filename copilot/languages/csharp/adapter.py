@@ -23,7 +23,8 @@ CONVENTIONS = f"""Destino: C# 12 sobre .NET 8, solo la biblioteca estándar en e
   `Infrastructure` (adaptadores del framework, NO se compila en la verificación).
 - `decimal` con `Math.Round(x, n, MidpointRounding.AwayFromZero)` o truncamiento explícito
   (`Math.Truncate(x * 10^n) / 10^n`) según el modo del tipo neutral. OJO: Math.Round por defecto es HALF_EVEN.
-- Nullable habilitado. No agregues archivos .csproj, .sln ni Program.cs.
+- Nullable habilitado. No agregues archivos .csproj, .sln ni Program.cs; las pruebas que escribas van en
+  `Tests/` (no se compilan en la verificación de equivalencia, la plataforma usa su propio arnés).
 {COMMON_RULES}"""
 
 CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
@@ -35,9 +36,14 @@ CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
     <AssemblyName>AgenTCSVerify</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
     <StartupObject>AgenTCSHarness</StartupObject>
+    <UseAppHost>false</UseAppHost>
+    <NuGetAudit>false</NuGetAudit>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="**/Infrastructure/**;**/infrastructure/**;bin/**;obj/**;out/**" />
+    <!-- Infraestructura del framework, pruebas propias (xUnit/NUnit sin red) y Program.cs no entran -->
+    <Compile Remove="**/Infrastructure/**;**/infrastructure/**;**/Tests/**;**/tests/**;**/*.Tests/**;**/*Tests.cs;**/Program.cs;bin/**;obj/**;out/**" />
   </ItemGroup>
 </Project>
 """
@@ -95,7 +101,7 @@ public static class AgenTCSHarness
         JsonValueKind.Object => e.EnumerateObject().ToDictionary(p => p.Name, p => Conv(p.Value)),
         JsonValueKind.Array => e.EnumerateArray().Select(Conv).ToList(),
         JsonValueKind.String => e.GetString(),
-        JsonValueKind.Number => e.TryGetInt64(out var l) ? l : e.GetDecimal(),
+        JsonValueKind.Number => e.TryGetInt64(out var l) ? (object)l : e.GetDecimal(),   // (object): si no, el ternario vuelve decimal a todo entero
         JsonValueKind.True => true,
         JsonValueKind.False => false,
         _ => null,
@@ -109,6 +115,10 @@ public static class AgenTCSHarness
             case string s: Str(sb, s); break;
             case bool b: sb.Append(b ? "true" : "false"); break;
             case decimal m: Str(sb, m.ToString(CultureInfo.InvariantCulture)); break;
+            case Enum en: Str(sb, en.ToString()); break;
+            case char ch: Str(sb, ch.ToString()); break;
+            case DateOnly dt: Str(sb, dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); break;
+            case DateTime dtm: Str(sb, dtm.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture)); break;
             case double or float: Str(sb, Convert.ToString(v, CultureInfo.InvariantCulture)); break;
             case int or long or short or byte or uint or ulong: sb.Append(Convert.ToString(v, CultureInfo.InvariantCulture)); break;
             case IDictionary dict:
@@ -141,6 +151,9 @@ public static class AgenTCSHarness
 }
 '''
 
+_DOTNET_ENV = {"MSBUILDDISABLENODEREUSE": "1", "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1",
+               "DOTNET_GENERATE_ASPNET_CERTIFICATE": "false", "DOTNET_ADD_GLOBAL_TOOLS_TO_PATH": "false"}
+
 _TYPES = {TypeKind.DECIMAL: "decimal", TypeKind.INTEGER: "long", TypeKind.FLOAT: "double", TypeKind.STRING: "string",
           TypeKind.DATE: "DateOnly", TypeKind.DATETIME: "DateTime", TypeKind.BOOLEAN: "bool",
           TypeKind.ENUM: "enum", TypeKind.RECORD: "record"}
@@ -163,9 +176,14 @@ class CSharpTarget(BaseTarget):
             extra.unlink()   # la plataforma controla el proyecto de verificación
         (project / PROJECT).write_text(CSPROJ, encoding="utf-8")
         (project / HARNESS).write_text(HARNESS_SOURCE, encoding="utf-8")
-        return to_build(run_cmd(["dotnet", "build", PROJECT, "-c", "Release", "-o", OUT, "--nologo", "-v", "q"], project))
+        # Sin servidores de compilación ni nodos reutilizables: si quedan vivos, retienen la salida capturada
+        # y el proceso parece colgado hasta el timeout.
+        return to_build(run_cmd(["dotnet", "build", PROJECT, "-c", "Release", "-o", OUT, "--nologo", "-v", "q",
+                                 "--disable-build-servers", "-nodeReuse:false"], project, timeout=300,
+                                extra_env=_DOTNET_ENV))
 
     def run_harness(self, project: Path, cases: list[Case]) -> list[CaseOutput]:
         write_cases(project, cases)
-        result = run_cmd(["dotnet", f"{OUT}/AgenTCSVerify.dll", "cases.json", "actual.json"], project)
+        result = run_cmd(["dotnet", f"{OUT}/AgenTCSVerify.dll", "cases.json", "actual.json"], project,
+                         extra_env=_DOTNET_ENV)
         return read_actual(project, result)

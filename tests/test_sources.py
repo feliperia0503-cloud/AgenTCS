@@ -4,6 +4,7 @@ import json
 import shutil
 import tarfile
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -126,3 +127,101 @@ def test_engine_migrates_zip_to_java(tmp_path):
     assert "spring" in run.phases[Phase.DISENO].gate_message
     assert "Framework elegido: spring" in llm.prompts("generator")[0]
     assert all(SECRET not in p for _, _, p in llm.calls)
+
+
+# --- Anti-SSRF: el repositorio debe estar en internet público -----------------------------------------
+
+@pytest.mark.parametrize("url", [
+    "https://localhost/org/repo.git",
+    "https://LOCALHOST:8443/org/repo.git",
+    "https://git.localhost/org/repo.git",
+    "https://repos.corp.internal/org/repo.git",
+    "https://127.0.0.1/org/repo.git",
+    "https://127.1/org/repo.git",
+    "https://2130706433/org/repo.git",
+    "https://0x7f000001/org/repo.git",
+    "https://10.0.0.5/org/repo.git",
+    "https://172.16.3.4/org/repo.git",
+    "https://192.168.1.10/org/repo.git",
+    "https://169.254.169.254/latest/meta-data",
+    "https://100.64.0.1/org/repo.git",
+    "https://0.0.0.0/org/repo.git",
+])
+def test_repo_url_rejects_local_and_private_hosts(url, monkeypatch):
+    monkeypatch.setattr(sources, "run_cmd", lambda *a, **k: pytest.fail("no debe intentar clonar"))
+    with pytest.raises(sources.SourceError) as e:
+        sources.clone_repo(url, "main")
+    assert e.value.code == "REPO_HOST_BLOCKED"
+    assert e.value.action
+
+
+@pytest.mark.parametrize("resolved", [["169.254.169.254"], ["10.1.2.3"], ["::1"], ["fe80::1"],
+                                      ["::ffff:127.0.0.1"], ["140.82.112.3", "192.168.0.7"]])
+def test_repo_hostname_resolving_to_private_ip_is_blocked(resolved, monkeypatch):
+    monkeypatch.setattr(sources, "resolve_host", lambda host, port: resolved)
+    monkeypatch.setattr(sources, "run_cmd", lambda *a, **k: pytest.fail("no debe intentar clonar"))
+    with pytest.raises(sources.SourceError) as e:
+        sources.clone_repo("https://git.ejemplo-sintetico.com/org/repo.git", "main")
+    assert e.value.code == "REPO_HOST_BLOCKED"
+
+
+def test_unresolvable_host_reports_clear_error(monkeypatch):
+    def fail(host, port):
+        raise OSError("sin DNS")
+    monkeypatch.setattr(sources, "resolve_host", fail)
+    with pytest.raises(sources.SourceError) as e:
+        sources.clone_repo("https://no-existe.ejemplo-sintetico.com/org/repo.git", None)
+    assert e.value.code == "REPO_HOST_UNRESOLVED"
+
+
+def test_public_repo_is_cloned_pinned_to_validated_ip(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sources, "resolve_host", lambda host, port: ["140.82.112.3"])
+
+    def fake_run(args, cwd, timeout):
+        calls.append(args)
+        repo = Path(args[-1])
+        repo.mkdir(parents=True)
+        (repo / "CALC.cbl").write_text("       PROCEDURE DIVISION.\n           GOBACK.\n")
+        return type("R", (), {"ok": True})()
+
+    monkeypatch.setattr(sources, "run_cmd", fake_run)
+    files = sources.clone_repo("https://github.com/org/repo.git", "main")
+    assert [f[0] for f in files] == ["CALC.cbl"]
+    args = calls[0]
+    assert "http.curloptResolve=github.com:443:140.82.112.3" in args
+    assert "http.followRedirects=false" in args
+    assert args[args.index("--branch") + 1] == "main"
+
+
+# --- samples/: programas sintéticos para las corridas reales ---------------------------------------------
+
+SAMPLES = Path(__file__).resolve().parents[1] / "samples"
+
+
+@pytest.mark.parametrize("rel, language, units", [
+    ("cobol/INTMORA.cbl", "cobol", {"0000-PRINCIPAL", "1000-VALIDAR", "2000-CALCULAR-INTERES"}),
+    ("cobol/PAGOMIN.cbl", "cobol", {"1000-PAGO-BASE", "2000-APLICAR-ATRASO", "3000-APLICAR-LIMITES"}),
+    ("plsql/fn_comision_transferencia.sql", "plsql", {"fn_comision_transferencia"}),
+])
+def test_samples_are_ingested_and_segmented(rel, language, units):
+    path = SAMPLES / rel
+    files = sources.collect([(path.name, path.read_bytes())], None, None)
+    assert sources.dominant_language(files) == language
+    found = {u.name for u in segment([SourceFile(path=n, content=c) for n, c in files], language).units}
+    assert units <= found
+
+
+def test_samples_have_no_secrets_and_use_no_float():
+    from copilot.security.sanitizer import Sanitizer
+    for path in SAMPLES.rglob("*"):
+        if path.suffix in {".cbl", ".sql"}:
+            text = path.read_text(encoding="utf-8")
+            assert Sanitizer().sanitize_text(path.name, text)[1] == [], path
+            assert "COMP-1" not in text and "COMP-2" not in text and "BINARY_DOUBLE" not in text
+
+
+def test_plain_sql_stays_sql_and_plsql_in_sql_file_is_detected():
+    assert sources.language_of("q.sql", "SELECT id FROM cuentas WHERE saldo > 0;")[0] == "sql"
+    assert sources.language_of("p.sql", "CREATE OR REPLACE PROCEDURE p IS BEGIN NULL; END;")[0] == "plsql"
+    assert sources.language_of("b.sql", "DECLARE\n v NUMBER;\nBEGIN\n NULL;\nEND;\n")[0] == "plsql"

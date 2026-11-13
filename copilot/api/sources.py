@@ -3,11 +3,15 @@ repositorio Git por HTTPS (GitHub, Bitbucket, GitLab, Azure DevOps...). Cualquie
 
 Seguridad: sin rutas absolutas ni '..' (zip slip), límites de tamaño y cantidad, se descartan binarios y
 carpetas de dependencias, clon superficial sin credenciales. El contenido se sanitiza después.
+Anti-SSRF: el host del repositorio debe resolver solo a IPs públicas (nada de localhost, redes privadas,
+enlace local 169.254.x.x ni metadatos de nube); git se conecta a la IP ya validada y no sigue redirecciones.
 """
 from __future__ import annotations
 
 import io
+import ipaddress
 import re
+import socket
 import shutil
 import tarfile
 import tempfile
@@ -49,6 +53,7 @@ ARCHIVE_SUFFIXES = (".zip", ".tar", ".tar.gz", ".tgz")
 CLONE_TIMEOUT = 180
 _URL = re.compile(r"^https://[A-Za-z0-9.-]+(?::\d+)?/[\w./~%+-]+?/?$")
 _BRANCH = re.compile(r"^[\w./-]{1,100}$")
+_BLOCKED_SUFFIXES = (".localhost", ".local", ".internal", ".localdomain", ".home.arpa")
 
 
 class SourceError(Exception):
@@ -127,19 +132,72 @@ def expand_archive(name: str, data: bytes) -> list[tuple[str, str]]:
     return out[:MAX_FILES]
 
 
+def resolve_host(host: str, port: int) -> list[str]:
+    """Resuelve el host a sus IPs. Separado para poder simularlo en las pruebas."""
+    infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    return sorted({info[4][0] for info in infos})
+
+
+def _is_public(ip_text: str) -> bool:
+    ip = ipaddress.ip_address(ip_text.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not ip.is_multicast
+
+
+def _blocked(message: str) -> SourceError:
+    return SourceError(422, "REPO_HOST_BLOCKED", message,
+                       "Usa un repositorio público en internet (GitHub, Bitbucket, GitLab, Azure DevOps…) "
+                       "o descarga el código como .zip y súbelo.")
+
+
+def check_public_host(host: str, port: int) -> str:
+    """Valida que el host sea público y devuelve la IP con la que se debe conectar git."""
+    host = host.lower().rstrip(".")
+    if host == "localhost" or host.endswith(_BLOCKED_SUFFIXES):
+        raise _blocked("La URL apunta a un equipo local o de red interna.")
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        literal = None
+    if literal is None and (host.rsplit(".", 1)[-1].isdigit() or "." not in host):
+        # 127.1, 2130706433, 0x7f.1 o nombres sin dominio: formas ambiguas que git interpretaría como IP o red local
+        raise _blocked("La URL usa una dirección ambigua o sin dominio.")
+    if literal is not None:
+        ips = [str(literal)]
+    else:
+        try:
+            ips = resolve_host(host, port)
+        except (OSError, UnicodeError):
+            raise SourceError(422, "REPO_HOST_UNRESOLVED", f"No se pudo resolver {host}.",
+                              "Revisa la URL y la conexión a internet, o sube el código como .zip.") from None
+    if not ips or not all(_is_public(ip) for ip in ips):
+        raise _blocked("La URL apunta a una dirección privada, local o reservada.")
+    return ips[0]
+
+
 def clone_repo(url: str, branch: str | None) -> list[tuple[str, str]]:
     """Clon superficial (solo lectura) de un repositorio HTTPS público y lectura de su código."""
     url, branch = (url or "").strip(), (branch or "").strip()
-    host = url.split("//", 1)[1].split("/", 1)[0] if "//" in url else ""
-    if not _URL.match(url) or "@" in host:
+    authority = url.split("//", 1)[1].split("/", 1)[0] if "//" in url else ""
+    if not _URL.match(url) or "@" in authority:
         raise SourceError(422, "REPO_URL_INVALID", "La URL del repositorio no es válida.",
                           "Usa una URL https sin usuario ni token (GitHub, Bitbucket, GitLab, Azure DevOps…) o sube un .zip.")
     if branch and not _BRANCH.match(branch):
         raise SourceError(422, "BRANCH_INVALID", "El nombre de la rama no es válido.", "Revisa la rama (p. ej. main).")
+    host, _, port_text = authority.partition(":")
+    port = int(port_text) if port_text else 443
+    if not 0 < port < 65536:
+        raise SourceError(422, "REPO_URL_INVALID", "La URL del repositorio no es válida.", "Revisa el puerto de la URL.")
+    ip = check_public_host(host, port)
+    pinned = f"[{ip}]" if ":" in ip else ip
     tmp = Path(tempfile.mkdtemp(prefix="agentcs-repo-"))
     try:
-        args = ["git", "-c", "credential.helper=", "-c", "core.askPass=", "clone", "--depth", "1",
-                "--single-branch", "--no-tags", *(["--branch", branch] if branch else []), url, str(tmp / "repo")]
+        # curloptResolve fija la IP validada (evita DNS rebinding); sin redirecciones hacia otros hosts.
+        args = ["git", "-c", "credential.helper=", "-c", "core.askPass=", "-c", "http.followRedirects=false",
+                "-c", f"http.curloptResolve={host.lower()}:{port}:{pinned}", "-c", "protocol.allow=never",
+                "-c", "protocol.https.allow=always", "clone", "--depth", "1", "--single-branch", "--no-tags",
+                *(["--branch", branch] if branch else []), url, str(tmp / "repo")]
         result = run_cmd(args, tmp, timeout=CLONE_TIMEOUT)
         if not result.ok:
             raise SourceError(422, "REPO_CLONE_FAILED", "No se pudo clonar el repositorio.",
@@ -163,22 +221,31 @@ def read_dir(root: Path) -> list[tuple[str, str]]:
     return out
 
 
-def language_of(path: str) -> tuple[str, str, bool]:
-    return EXT_LANGUAGE.get(Path(path).suffix.lower(), ("desconocido", "Otro", True))
+_PLSQL_HINT = re.compile(
+    r"\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:EDITIONABLE\s+)?(?:FUNCTION|PROCEDURE|PACKAGE|TRIGGER|TYPE\s+BODY)\b"
+    r"|^\s*DECLARE\b|\bEXCEPTION\s+WHEN\b|\bRETURN\s+\w+\s+(?:IS|AS)\b", re.IGNORECASE | re.MULTILINE)
+
+
+def language_of(path: str, text: str | None = None) -> tuple[str, str, bool]:
+    """Lenguaje por extensión; un .sql con bloques procedurales se reconoce como PL/SQL por su contenido."""
+    found = EXT_LANGUAGE.get(Path(path).suffix.lower(), ("desconocido", "Otro", True))
+    if found[0] == "sql" and text and _PLSQL_HINT.search(text):
+        return EXT_LANGUAGE[".plsql"]
+    return found
 
 
 def dominant_language(files: list[tuple[str, str]]) -> str:
     """Lenguaje con más líneas de lógica (ignora formularios, configuración y scripts)."""
     weights: Counter[str] = Counter()
     for path, text in files:
-        lang, _, logic = language_of(path)
+        lang, _, logic = language_of(path, text)
         if logic:
             weights[lang] += text.count("\n") + 1
     return weights.most_common(1)[0][0] if weights else "desconocido"
 
 
 def inventory(files: list[tuple[str, str]]) -> dict:
-    names: Counter[str] = Counter(language_of(p)[1] for p, _ in files)
+    names: Counter[str] = Counter(language_of(p, t)[1] for p, t in files)
     return {"files": len(files), "lines": sum(t.count("\n") + 1 for _, t in files),
             "languages": [{"name": n, "files": c} for n, c in names.most_common()]}
 
