@@ -1,0 +1,17 @@
+id: php
+name: PHP (CLI)
+role: source
+extensions: [".php", ".inc.php", ".phtml"]
+version: 0.1.0
+runner:
+  tools: [php]
+  build: ["php", "-l", "{entry}"]
+  run: ["php", "-d", "display_errors=stderr", "{entry}"]
+  harness_hint: |
+    - Escribe agentcs_driver.php (entry): require_once del archivo legacy por su ruta relativa; lee cada
+      entrada con trim(fgets(STDIN)); conviértela como lo espera el legacy ((float), (int) o string);
+      invoca la función o clase legacy SIN copiar su lógica; imprime echo "@@campo=" . $valor . "\n";
+      para errores echo "@@ERROR=" . $codigo . "|\n".
+    - Si el legacy devuelve floats sin formatear, imprime el valor con round($v, <escala del contrato>)
+      (la misma función que usaría PHP al mostrarlo) y decláralo en notes.
+    - Si el legacy imprime HTML o usa $_GET/$_POST, asigna esas superglobales en el driver antes de incluirlo.

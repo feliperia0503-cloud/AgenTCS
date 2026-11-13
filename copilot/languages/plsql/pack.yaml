@@ -1,0 +1,8 @@
+id: plsql
+name: PL/SQL (Oracle)
+role: source
+extensions: [".pks", ".pkb", ".prc", ".fnc", ".trg", ".plsql", ".sql"]
+aliases: [sql]
+version: 0.1.0
+# Sin runner en la imagen base: ejecutarlo exige Oracle Database (perfil 'oracle' de docker compose).
+# Mientras tanto el oráculo es nivel B (pares E/S) o C (referencia desde la especificación aprobada).

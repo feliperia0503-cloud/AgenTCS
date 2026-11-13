@@ -125,7 +125,7 @@ class SelfCorrectingLoop:
         files: dict[str, str] | None = None
         feedback: str | None = None
         best: LoopResult | None = None
-        best_passed: set[str] = set()
+        passed_before: set[str] = set()   # casos que pasaron en algún intento anterior
         no_improve = 0
         records: list[AttemptRecord] = []
         stop = "max_intentos"
@@ -142,12 +142,16 @@ class SelfCorrectingLoop:
                 self.on_attempt(record, report, dict(files or {}))
 
             failing = set(failing_cases(report))
+            # Se calcula ANTES de actualizar la mejor versión: un intento puede subir la similitud
+            # y aun así romper casos que antes pasaban; eso también es una regresión.
+            regressions = failing & passed_before if error is None else set()
+            if error is None:
+                passed_before |= {c.id for c in cases} - failing
             if best is None or score > best.best_score:
                 if best is not None and self.lessons and previous_feedback:
                     learn(self.llm, self.lessons, pair, previous_feedback,
                           f"La similitud subió de {best.best_score:.2f} a {score:.2f} en el intento {attempt}.")
                 best = LoopResult(dict(files or {}), report, score, attempt)
-                best_passed = {c.id for c in cases} - failing
                 no_improve = 0
             else:
                 no_improve += 1
@@ -156,7 +160,7 @@ class SelfCorrectingLoop:
             if reason:
                 stop = reason
                 break
-            feedback = error or build_feedback(report, spec, cases, failing & best_passed,
+            feedback = error or build_feedback(report, spec, cases, regressions,
                                                self.config.max_feedback_cases)
 
         if best is None:   # imposible con max_attempts >= 1; protege contra configuraciones inválidas

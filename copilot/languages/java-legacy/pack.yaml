@@ -1,0 +1,17 @@
+id: java-legacy
+name: Java legacy (1.4–8)
+role: source
+extensions: [".java"]
+version: 0.1.0
+runner:
+  tools: [javac, java]
+  compile_extensions: [".java"]
+  build: ["javac", "-encoding", "UTF-8", "-nowarn", "{flags}", "-d", "agentcs_classes", "{all}"]
+  run: ["java", "-cp", "agentcs_classes", "{entry_stem}"]
+  allowed_flags: ["-Xlint:none"]
+  harness_hint: |
+    - Escribe agentcs_driver.java en el paquete por defecto con `public class agentcs_driver` y main.
+      Lee las entradas con BufferedReader(new InputStreamReader(System.in)); decimales con new BigDecimal(s).
+      Importa e invoca las clases legacy SIN copiar su lógica. Imprime "@@campo=" + bd.toPlainString();
+      errores "@@ERROR=codigo|".
+    - Si algún archivo depende de EJB, Servlets o librerías ausentes, compila solo los necesarios con "compile".

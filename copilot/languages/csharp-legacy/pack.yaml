@@ -1,0 +1,18 @@
+id: csharp-legacy
+name: C# .NET Framework (Mono)
+role: source
+extensions: [".cs"]
+version: 0.1.0
+runner:
+  tools: [mcs, mono]
+  compile_extensions: [".cs"]
+  build: ["mcs", "-nowarn:618,612,219,168", "{flags}", "-out:agentcs_prog.exe", "{all}"]
+  run: ["mono", "agentcs_prog.exe"]
+  allowed_flags: ["-main:[A-Za-z_][\\w.]*", "-r:System(\\.[\\w]+)*\\.dll", "-langversion:[\\w.]+", "-unsafe"]
+  harness_hint: |
+    - Escribe agentcs_driver.cs con `static class AgenTCSDriver { static void Main() {...} }`.
+      Lee cada entrada con Console.ReadLine(); decimales con decimal.Parse(s, CultureInfo.InvariantCulture).
+      Invoca la clase/método legacy SIN copiar su lógica. Imprime
+      Console.WriteLine("@@campo=" + valor.ToString(CultureInfo.InvariantCulture)); errores "@@ERROR=codigo|".
+    - Si el legacy ya tiene un Main, agrega el flag -main:AgenTCSDriver.
+    - Si algún archivo depende de System.Web, WinForms o WCF, compila solo los necesarios con "compile".

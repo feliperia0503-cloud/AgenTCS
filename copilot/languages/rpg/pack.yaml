@@ -1,0 +1,6 @@
+id: rpg
+name: RPG (IBM i)
+role: source
+extensions: [".rpg", ".rpgle", ".sqlrpgle"]
+version: 0.1.0
+# Sin compilador fuera de IBM i: oráculo nivel B (pares E/S del cliente) o C.
