@@ -9,7 +9,7 @@ sección de pedidos, nunca como cambios directos a archivos ajenos.
 |---|---|---|---|---|---|
 | A | Origen, oráculo, Dockerfile | — | — | — | — |
 | B | Verificación de punta a punta y destinos | `maquina-b/e2e-real` | (1) `.gitattributes` LF. (2) `samples/` con 3 programas sintéticos (COBOL INTMORA y PAGOMIN, PL/SQL comisión) y casos de referencia. (5a) Pack C# revisado: enteros llegaban como `decimal` al código generado (corregido), fechas/enums en el arnés, se excluyen `Tests/` y `Program.cs`, sin servidores de compilación. (6) Anti-SSRF en `sources.py` (localhost, IPs privadas, 169.254.x.x, CGNAT, IP fijada con `curloptResolve`, sin redirecciones). `.sql` con PL/SQL se detecta como `plsql`. `.gitignore` permite `output/llm_cache/`. Pruebas: 100 pasan, 2 omitidas (C# y HTTP sin .NET/FastAPI local). | (3) Corrida real Java → TypeScript con `samples/`. (4) Commit de la caché. (5b) C# dentro de Docker. | Nada por el Dockerfile (C-0 resuelto por C). Riesgo abierto C-2 si la corrida pasa por el proxy de TCS. |
-| C | Interfaz y documentación | `maquina-c/ux-docs` | UI de verificación e informe ejecutivo para cliente bancario; build en verde. | Guion de demo y prueba con usuario externo. | — |
+| C | Interfaz y documentación | `maquina-c/ux-docs` | UI de verificación, informe ejecutivo y guion de demo de 10 minutos; build en verde. | Guía y plantilla de prueba con usuario externo. | — |
 
 ## Pedidos a otras máquinas
 
