@@ -1,6 +1,8 @@
 """Registro de packs de lenguaje. El núcleo pide adaptadores por id y nunca importa un pack concreto."""
 from __future__ import annotations
 
+import functools
+
 from copilot.contracts import SourceAdapter, TargetAdapter
 
 
@@ -18,8 +20,11 @@ def _targets() -> dict[str, TargetAdapter]:
     return {"java": JavaTarget(), "csharp": CSharpTarget(), "typescript": TypeScriptTarget(), "python": PythonTarget()}
 
 
+@functools.lru_cache(maxsize=1)
 def _sources() -> dict[str, SourceAdapter]:
-    return {}   # los packs de origen (cobol, plsql...) se registran aquí cuando existan
+    """Packs de origen declarativos (copilot/languages/<id>/pack.yaml con role: source)."""
+    from .source_pack import load_source_packs
+    return load_source_packs()
 
 
 def get_target(pack_id: str) -> TargetAdapter:
@@ -36,3 +41,7 @@ def get_source(pack_id: str | None) -> SourceAdapter | None:
 
 def available_targets() -> list[str]:
     return sorted(_targets())
+
+
+def available_sources() -> list[str]:
+    return sorted({p.info.id for p in _sources().values()})

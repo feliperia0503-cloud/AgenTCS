@@ -1,0 +1,24 @@
+id: cobol
+name: COBOL (GnuCOBOL)
+role: source
+extensions: [".cbl", ".cob", ".cpy"]
+version: 0.1.0
+runner:
+  tools: [cobc]
+  compile_extensions: [".cbl", ".cob"]
+  include_args: ["-I{dir}"]
+  build: ["cobc", "-x", "{flags}", "{includes}", "-o", "agentcs_prog", "{entry}", "{others}"]
+  run: ["./agentcs_prog"]
+  allowed_flags: ["-free", "-fixed", "-std=(default|ibm|mf|mvs|cobol2002|cobol2014|acu|bs2000)"]
+  harness_hint: |
+    - Se compila con cobc -x: el archivo "entry" es el programa principal y los demás se enlazan con él.
+    - Caso típico (el legacy tiene LINKAGE SECTION y PROCEDURE DIVISION USING): escribe agentcs_driver.cbl
+      como programa principal (entry), en formato FIJO (columnas 8-72) salvo que uses el flag -free.
+      ACCEPT cada entrada en un PIC X(40), conviértela con FUNCTION NUMVAL (o NUMVAL-C) y MUÉVELA a
+      variables con EXACTAMENTE la misma PIC/USAGE de la LINKAGE del legacy; luego CALL '<PROGRAM-ID>' USING ...
+      Al volver, mueve cada resultado a un campo editado con punto decimal (p. ej. PIC -(13)9.99) y
+      DISPLAY "@@campo=" CAMPO-EDITADO. Para errores: DISPLAY "@@ERROR=" codigo "|".
+    - Si el legacy termina con STOP RUN (no GOBACK), al llamarlo terminaría el proceso antes de imprimir:
+      en ese caso, si el legacy ya hace ACCEPT de sus entradas y DISPLAY de sus resultados, usa modo
+      "direct" con regex; si no, explica la limitación en notes.
+    - Los copybooks (.cpy) se encuentran con -I automáticamente.

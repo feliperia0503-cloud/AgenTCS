@@ -1,0 +1,11 @@
+# Semántica COBOL relevante para extraer reglas
+- `COMPUTE`/`ADD`/`MULTIPLY`/`DIVIDE` SIN `ROUNDED` TRUNCAN al número de decimales del receptor (DOWN). Con `ROUNDED`, redondeo HALF_UP (salvo `ROUNDED MODE` explícito).
+- El tipo del receptor manda: `PIC S9(9)V99` = decimal(11,2) con signo; sin `S` el valor es sin signo (se pierde el signo al asignar). `V` es punto implícito.
+- `COMP-3` (packed) y `COMP` (binario) no cambian el valor, solo el almacenamiento. Desbordar las posiciones enteras trunca por la izquierda salvo `ON SIZE ERROR`.
+- `ON SIZE ERROR` / `NOT ON SIZE ERROR` son reglas de negocio (desbordes, división por cero).
+- Niveles `88` son condiciones con nombre: tradúcelas a enums o predicados.
+- `PERFORM ... THRU`, `GO TO` y `ALTER` crean flujo no estructurado: baja la confianza y documenta el camino.
+- `EVALUATE` = tabla de decisión. `IF` anidados sin `END-IF` terminan en el punto.
+- `REDEFINES` reinterpreta la misma memoria; `OCCURS` define arreglos (índices desde 1).
+- `ACCEPT`/`DISPLAY`, `READ`/`WRITE`, `EXEC SQL`, `EXEC CICS` son infraestructura, no negocio.
+- Intermedios de `COMPUTE`: GnuCOBOL usa precisión amplia y aplica truncar/redondear solo al asignar.

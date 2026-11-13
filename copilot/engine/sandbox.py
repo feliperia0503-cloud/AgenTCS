@@ -57,14 +57,15 @@ def resolve(executable: str) -> str | None:
 
 
 def run_cmd(args: list[str], cwd: Path, timeout: float = DEFAULT_TIMEOUT,
-            extra_env: dict[str, str] | None = None) -> ProcResult:
+            extra_env: dict[str, str] | None = None, stdin: str | None = None) -> ProcResult:
     env = {k: v for k, v in os.environ.items() if k not in {"ANTHROPIC_API_KEY", "ORACLE_PASSWORD"}}
     env.update({"PYTHONDONTWRITEBYTECODE": "1", "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"})
     env.update(extra_env or {})
     args = [resolve(args[0]) or args[0], *args[1:]]
     try:
         p = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=timeout,
-                           env=env, shell=False, check=False)
+                           env=env, shell=False, check=False, input=stdin,
+                           stdin=None if stdin is not None else subprocess.DEVNULL)
         return ProcResult(p.returncode, p.stdout[-MAX_OUTPUT:], p.stderr[-MAX_OUTPUT:])
     except subprocess.TimeoutExpired as exc:
         out = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")

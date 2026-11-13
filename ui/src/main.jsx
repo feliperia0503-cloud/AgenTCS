@@ -38,6 +38,11 @@ const POLL_MS = 2500;
 const PHASE_NAMES = { 1: 'Ingesta', 2: 'Análisis', 3: 'Extracción de reglas', 4: 'Validación humana', 5: 'Diseño', 6: 'Generación', 7: 'Verificación', 8: 'Empaquetado' };
 const STATIONS = [['Código', [1]], ['Extracción', [2, 3]], ['Validación', [4]], ['Generación', [5, 6]], ['Pruebas', [7, 8]]];
 const ARCHIVE_ACCEPT = '.zip,.tar,.tgz,.gz,.cbl,.cob,.cpy,.jcl,.pli,.sql,.pks,.pkb,.prc,.fnc,.trg,.pas,.dpr,.dfm,.inc,.rpg,.rpgle,.sqlrpgle,.cs,.vb,.bas,.frm,.cls,.java,.jsp,.abap,.prg,.4gl,.f,.for,.f90,.c,.cpp,.h,.asm,.nsp,.py,.js,.php,.pl,.xml,.config';
+const ORACLE_LEVELS = {
+  A: 'El legacy se ejecuta con los mismos casos: es la evidencia más fuerte.',
+  B: 'La comparación usa pares de entrada y salida provistos y validados.',
+  C: 'La referencia se construye desde la especificación y cálculos revisados.',
+};
 
 const phaseOf = (run, n) => run?.phases?.[n] ?? run?.phases?.[String(n)] ?? { status: 'PENDIENTE', gate_message: '' };
 const anyFailed = (run) => run && Object.values(run.phases).some(p => p.status === 'FALLIDA');
@@ -83,7 +88,42 @@ function useRunPolling(run, setRun, setRunError) {
 
 function ErrorBox({ title, error }) {
   if (!error) return null;
-  return <div className="inline-error" role="alert"><strong>{title}</strong><span>{error.message}{error.action ? ` ${error.action}` : ''}</span></div>;
+  return <div className="inline-error" role="alert"><strong>{title}</strong><span>{error.message}</span>
+    {error.action && <span className="error-action"><b>Acción sugerida:</b> {error.action}</span>}
+  </div>;
+}
+
+function OracleLegend({ activeLevel }) {
+  return <section className="oracle-panel" aria-labelledby="oracle-title">
+    <div className="oracle-heading"><div><h2 id="oracle-title">Nivel de evidencia del oráculo</h2><p>Indica de dónde sale el resultado esperado usado para demostrar equivalencia.</p></div><span className={`oracle-badge level-${String(activeLevel).toLowerCase()}`}>Nivel {activeLevel}</span></div>
+    <div className="oracle-levels">{Object.entries(ORACLE_LEVELS).map(([level, description]) => <div key={level} className={level === activeLevel ? 'active' : ''}>
+      <b>{level}</b><span>{description}</span>{level === activeLevel && <em>Usado en esta corrida</em>}
+    </div>)}</div>
+  </section>;
+}
+
+const displayValue = (value) => value === undefined ? '—' : JSON.stringify(value);
+
+function DifferenceRows({ differences }) {
+  if (!differences.length) return <div className="attempt-clean"><Icon name="check" size={17}/><span>Sin diferencias en este intento.</span></div>;
+  return <div className="difference-grid" role="table" aria-label="Diferencias del intento">
+    <div className="difference-row difference-header" role="row"><span>Caso · campo</span><span>Esperado</span><span>Obtenido</span><span>Regla</span></div>
+    {differences.slice(0, 30).map((difference, index) => <div className="difference-row" role="row" key={`${difference.case_id}-${difference.field}-${index}`}>
+      <span><b>{difference.case_id}</b><small>{difference.field}</small></span>
+      <code>{displayValue(difference.expected)}</code><code>{displayValue(difference.actual)}</code>
+      <span>{difference.rule_ids.length ? difference.rule_ids.join(', ') : 'Sin regla asociada'}</span>
+    </div>)}
+    {differences.length > 30 && <p className="difference-limit">Se muestran 30 de {differences.length} diferencias.</p>}
+  </div>;
+}
+
+function CodeLines({ content, startLine = 1, highlightStart, highlightEnd }) {
+  const lines = String(content || '').split(/\r?\n/);
+  return <ol className="code-lines" aria-label="Código con números de línea">{lines.map((line, index) => {
+    const number = startLine + index;
+    const highlighted = number >= highlightStart && number <= highlightEnd;
+    return <li key={number} className={highlighted ? 'highlighted' : ''}><span>{number}</span><code>{line || ' '}</code></li>;
+  })}</ol>;
 }
 
 // ---------------------------------------------------------------- acceso (simulado, sin credenciales reales)
@@ -390,6 +430,7 @@ function RulesView({ run, setRun, setRunError, runError, setSection, userEmail }
 // ---------------------------------------------------------------- pruebas, intentos y código generado
 function TestsView({ run, setSection }) {
   const [fileName, setFileName] = useState(null);
+  const [ruleId, setRuleId] = useState('');
   const report = run?.verification;
   const files = Object.keys(run?.generated_files ?? {}).sort();
   const current = fileName && run.generated_files[fileName] !== undefined ? fileName : files[0];
@@ -401,25 +442,41 @@ function TestsView({ run, setSection }) {
   }
 
   const pct = report.total ? Math.round(report.passed / report.total * 1000) / 10 : 0;
+  const rules = run?.spec?.rules ?? [];
+  const selectedRule = rules.find(rule => rule.id === ruleId) ?? rules[0];
+  const sourcePath = selectedRule?.source?.file;
+  const sourceFile = run?.files?.find(file => file.path === sourcePath)
+    ?? run?.files?.find(file => file.path.endsWith(`/${sourcePath}`) || sourcePath?.endsWith(`/${file.path}`));
+  const sourceContent = sourceFile?.content ?? selectedRule?.source?.snippet ?? '';
+  const sourceStartLine = sourceFile ? 1 : (selectedRule?.source?.lines?.[0] ?? 1);
+  const similarity = report.similarity ?? 0;
   return <div className="workspace"><section className="page-heading"><div><h1>Validación y pruebas</h1><p>{report.oracle_description}</p></div>
-    <div className="heading-actions"><span className="demo-note">Oráculo nivel {report.oracle_level}</span>{isFinished(run) && <a className="primary-button" href={api.packageUrl(run.run_id)}><Icon name="download"/> Descargar paquete</a>}</div></section>
+    <div className="heading-actions"><span className={`oracle-badge level-${String(report.oracle_level).toLowerCase()}`}>Oráculo nivel {report.oracle_level}</span>{isFinished(run) && <a className="primary-button" href={api.packageUrl(run.run_id)}><Icon name="download"/> Descargar paquete</a>}</div></section>
     <section className="test-summary"><div className="test-score"><strong>{pct}%</strong><span>Equivalencia funcional</span><small>{report.passed} de {report.total} casos coinciden · intento {report.attempt}</small></div>
       <div className="coverage-bars">
-        <div><span><b>Similitud de comportamiento</b><em>{Math.round((report.similarity ?? 0) * 100)}%</em></span><i><u style={{ width: `${Math.round((report.similarity ?? 0) * 100)}%` }}/></i></div>
+        <div><span><b>Similitud de comportamiento</b><em>{similarity.toFixed(3)} / 1</em></span><i><u style={{ width: `${Math.round(similarity * 100)}%` }}/></i></div>
         <div><span><b>Casos equivalentes</b><em>{report.passed} / {report.total}</em></span><i><u style={{ width: `${pct}%` }}/></i></div>
         <div><span><b>Cobertura de código</b><em>{report.coverage_lines != null ? `${report.coverage_lines}%` : 'No medida aún'}</em></span><i><u style={{ width: `${report.coverage_lines ?? 0}%` }}/></i></div>
       </div></section>
-    <section className="test-table"><div className="table-heading"><div><h2>Intentos de autocorrección</h2><p>Cada intento recibe como retroalimentación los casos que fallaron en el anterior. Se conserva la mejor versión.</p></div></div>
-      <div className="table-row table-header"><span>Intento</span><span>Casos</span><span>Correctos</span><span>Similitud</span><span>Estado</span></div>
-      {attempts.map(a => <div className="table-row" key={a.attempt}><span><Icon name="test" size={18}/><b>Intento {a.attempt}{a.attempt === report.attempt ? ' · mejor versión' : ''}</b></span><span>{a.total}</span><span>{a.passed}</span><span>{Math.round((a.similarity ?? 0) * 100)}%</span><span className={`test-status ${a.passed === a.total ? 'passed' : 'warning'}`}>{a.passed === a.total ? 'Equivalente' : 'Con diferencias'}</span></div>)}
+    <OracleLegend activeLevel={report.oracle_level}/>
+    <section className="attempt-panel"><div className="table-heading"><div><h2>Intentos de autocorrección</h2><p>Cada intento usa como retroalimentación sus diferencias. La similitud se muestra en escala de 0 a 1.</p></div></div>
+      <ol className="attempt-timeline">{attempts.map(attempt => {
+        const passed = attempt.passed === attempt.total;
+        return <li key={attempt.attempt} className={passed ? 'passed' : 'warning'}><span className="attempt-node">{attempt.attempt}</span><div className="attempt-content">
+          <div className="attempt-summary"><div><strong>Intento {attempt.attempt}</strong>{attempt.attempt === report.attempt && <em>Mejor versión</em>}</div>
+            <dl><div><dt>Casos</dt><dd>{attempt.passed}/{attempt.total} aprobados</dd></div><div><dt>Similitud</dt><dd>{(attempt.similarity ?? 0).toFixed(3)}</dd></div><div><dt>Resultado</dt><dd className={`test-status ${passed ? 'passed' : 'warning'}`}>{passed ? 'Equivalente' : `${attempt.differences.length} diferencia(s)`}</dd></div></dl>
+          </div>
+          <details className="attempt-differences" defaultOpen={attempt.attempt === report.attempt}><summary>{attempt.differences.length ? `Ver ${attempt.differences.length} diferencia(s) de este intento` : 'Ver comprobación del intento'}</summary><DifferenceRows differences={attempt.differences}/></details>
+        </div></li>;
+      })}</ol>
     </section>
-    {report.differences.length > 0 && <section className="test-table"><div className="table-heading"><div><h2>Diferencias de la mejor versión</h2><p>Esperado (legacy/oráculo) frente a obtenido (código migrado).</p></div></div>
-      <div className="table-row table-header"><span>Caso · campo</span><span>Esperado</span><span>Obtenido</span><span>Regla</span><span></span></div>
-      {report.differences.slice(0, 30).map((d, i) => <div className="table-row" key={i}><span><b>{d.case_id}</b> {d.field}</span><span>{JSON.stringify(d.expected)}</span><span>{JSON.stringify(d.actual)}</span><span>{d.rule_ids.join(', ')}</span><span className="test-status warning">Revisar</span></div>)}
+    {files.length > 0 && selectedRule && <section className="comparison-panel"><div className="table-heading"><div><h2>Legacy y código generado, lado a lado</h2><p>La evidencia de la regla queda resaltada en el archivo legacy sanitizado.</p></div></div>
+      <div className="comparison-toolbar"><label>Regla de negocio<select value={selectedRule.id} onChange={event => setRuleId(event.target.value)}>{rules.map(rule => <option key={rule.id} value={rule.id}>{rule.id} · {rule.name}</option>)}</select></label>
+        <label>Archivo generado<select value={current} onChange={event => setFileName(event.target.value)}>{files.map(file => <option key={file} value={file}>{file}</option>)}</select></label></div>
+      <div className="code-comparison"><article className="code-pane"><header><div><span>Legacy sanitizado</span><strong>{sourcePath}</strong></div><small>Líneas {selectedRule.source.lines[0]}–{selectedRule.source.lines[1]} · {selectedRule.id}</small></header>
+        {sourceContent ? <CodeLines content={sourceContent} startLine={sourceStartLine} highlightStart={selectedRule.source.lines[0]} highlightEnd={selectedRule.source.lines[1]}/> : <div className="code-empty">El archivo fuente no está disponible en esta corrida.</div>}
+      </article><article className="code-pane"><header><div><span>Código generado</span><strong>{current}</strong></div><small>{run.target_language}{run.target_framework ? ` · ${run.target_framework}` : ''}</small></header><CodeLines content={run.generated_files[current]}/></article></div>
     </section>}
-    {files.length > 0 && <section className="test-table"><div className="table-heading"><div><h2>Código generado · {run.target_language}{run.target_framework ? ` · ${run.target_framework}` : ''}</h2><p>{files.length} archivo(s) de la mejor versión. Los adaptadores del framework están en infrastructure/.</p></div></div>
-      <div className="file-tabs">{files.map(f => <button key={f} className={f === current ? 'active' : ''} onClick={() => setFileName(f)}>{f}</button>)}</div>
-      <pre className="code-block tall">{run.generated_files[current]}</pre></section>}
   </div>;
 }
 

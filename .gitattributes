@@ -1,0 +1,18 @@
+# Finales de línea LF en el repositorio para los 3 equipos (Windows incluido).
+# Evita que archivos aparezcan modificados solo por CRLF.
+* text=auto eol=lf
+
+# Binarios explícitos (no se normalizan)
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.tar  binary
+*.gz   binary
+*.woff binary
+*.woff2 binary

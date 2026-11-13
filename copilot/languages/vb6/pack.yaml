@@ -1,0 +1,7 @@
+id: vb6
+name: Visual Basic 6 / VB.NET
+role: source
+extensions: [".bas", ".cls", ".frm", ".vb"]
+aliases: [vbnet]
+version: 0.1.0
+# Sin runtime de VB6 en Linux: oráculo nivel B o C.
