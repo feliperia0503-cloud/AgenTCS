@@ -479,3 +479,7 @@ hr { border:0; border-top:1px solid var(--line); margin:28px 0; }
 .official-table th, .official-table td { padding: 6px 10px; border-bottom: 1px solid var(--line, #eceff3); text-align: left; white-space: nowrap; }
 .official-table th { background: #f6f7f9; position: sticky; top: 0; }
 .official-table td.diff { background: #ffe1e1; font-weight: 600; }
+
+.package-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; text-decoration: none; }
+.package-button[disabled] { opacity: 0.55; cursor: not-allowed; }
+.top-actions { gap: 12px; }

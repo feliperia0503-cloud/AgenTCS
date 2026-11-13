@@ -86,6 +86,15 @@ function useRunPolling(run, setRun, setRunError) {
   }, [run, setRun, setRunError]);
 }
 
+function PackageButton({ run, compact = false }) {
+  if (!run) return null;
+  const ready = isFinished(run);
+  const label = compact ? 'Descargar paquete' : 'Descargar paquete (código migrado + docs)';
+  return ready
+    ? <a className="primary-button package-button" href={api.packageUrl(run.run_id)} download={`agentcs-${run.run_id}.zip`}><Icon name="download"/> {label}</a>
+    : <button className="secondary-button package-button" disabled title="Disponible cuando termine la verificación y el empaquetado"><Icon name="download"/> {label}</button>;
+}
+
 function ErrorBox({ title, error }) {
   if (!error) return null;
   return <div className="inline-error" role="alert"><strong>{title}</strong><span>{error.message}</span>
@@ -258,7 +267,7 @@ function App() {
     </aside>
     {mobileNav && <button className="scrim" onClick={() => setMobileNav(false)} aria-label="Cerrar navegación"/>}
     <main className="main-area">
-      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Abrir navegación"><Icon name="menu"/></button><div className="breadcrumbs"><span>Proyectos</span><Icon name="chevron" size={16}/><strong>{run?.spec?.program ?? (run ? 'Migración en curso' : 'Nueva migración')}</strong></div><div className="top-actions"><span className="environment"><i/> {needsPolling(run) ? 'Procesando…' : 'Entorno local'}</span><span className="avatar small">{initials}</span></div></header>
+      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Abrir navegación"><Icon name="menu"/></button><div className="breadcrumbs"><span>Proyectos</span><Icon name="chevron" size={16}/><strong>{run?.spec?.program ?? (run ? 'Migración en curso' : 'Nueva migración')}</strong></div><div className="top-actions"><PackageButton run={run} compact/><span className="environment"><i/> {needsPolling(run) ? 'Procesando…' : 'Entorno local'}</span><span className="avatar small">{initials}</span></div></header>
       {section === 'tests' ? <TestsView {...shared}/>
         : section === 'rules' ? <RulesView {...shared}/>
         : section === 'home' ? <Overview {...shared}/>
@@ -346,7 +355,7 @@ function MigrationView(props) {
         <ErrorBox title="No se pudo continuar" error={runError}/>
         {failed && <div className="inline-error recovery" role="alert"><div><strong>{PHASE_NAMES[failed[0]]} se detuvo</strong><span>{failed[1].gate_message}</span></div><button type="button" onClick={resetRun}>Empezar de nuevo</button></div>}
         {run && awaitingReview(run) && <div className="target-guidance suggested" role="status"><Icon name="rules" size={18}/><div><strong>{run.spec.rules.length} reglas extraídas esperan tu revisión</strong><span>Aprueba, ajusta o rechaza cada una; luego aprueba la especificación para generar el código.</span><button className="text-action" onClick={() => setSection('rules')}>Revisar reglas <Icon name="arrow" size={16}/></button></div></div>}
-        {run && isFinished(run) && <div className="target-guidance suggested" role="status"><Icon name="check" size={18}/><div><strong>Migración completada</strong><span>{phaseOf(run, 7).gate_message}</span><button className="text-action" onClick={() => setSection('tests')}>Ver pruebas y código <Icon name="arrow" size={16}/></button></div></div>}
+        {run && isFinished(run) && <div className="target-guidance suggested" role="status"><Icon name="check" size={18}/><div><strong>Migración completada</strong><span>{phaseOf(run, 7).gate_message}</span><button className="text-action" onClick={() => setSection('tests')}>Ver pruebas y código <Icon name="arrow" size={16}/></button><PackageButton run={run}/></div></div>}
       </section>
       <aside className="rule-inspector">
         <div className="inspector-heading"><div><h2>Estado de la ejecución</h2><p>{run ? `Origen ${run.source_language} → ${run.target_language}` : 'Aparecerá al iniciar la migración'}</p></div></div>
