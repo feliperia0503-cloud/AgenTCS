@@ -1,0 +1,15 @@
+anthropic
+langgraph
+langchain-anthropic
+pydantic
+python-dotenv
+pyyaml
+streamlit
+tree-sitter
+tree-sitter-language-pack
+oracledb
+detect-secrets
+networkx
+jinja2
+pytest
+semgrep

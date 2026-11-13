@@ -1,0 +1,22 @@
+{
+  "name": "AgenTCS",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "postCreateCommand": "npm install -g @anthropic-ai/claude-code",
+  "forwardPorts": [8501],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python",
+        "vscjava.vscode-java-pack",
+        "broadcommfd.cobol-language-support"
+      ]
+    }
+  }
+}

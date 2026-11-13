@@ -1,0 +1,24 @@
+# Demo y ejecución con un solo comando:  docker compose up --build
+# Con PL/SQL como lenguaje origen (oráculo nivel A):  docker compose --profile oracle up --build
+services:
+  copilot:
+    build: .
+    image: agentcs/copilot:latest
+    ports:
+      - "8501:8501"
+    env_file:
+      - path: .env
+        required: false   # sin .env arranca en modo replay (respuestas cacheadas)
+    environment:
+      ORACLE_DSN: oracle:1521/FREEPDB1
+    volumes:
+      - ./output:/app/output   # el paquete de migración generado queda en tu carpeta
+
+  # Sandbox para ejecutar PL/SQL legacy con datos sintéticos. Solo se levanta con --profile oracle.
+  oracle:
+    profiles: ["oracle"]
+    image: gvenzl/oracle-free:slim
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-sandbox_only}   # contraseña local del sandbox, sin datos reales
+    ports:
+      - "1521:1521"
