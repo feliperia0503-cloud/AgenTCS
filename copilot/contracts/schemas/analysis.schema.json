@@ -1,0 +1,499 @@
+{
+  "$defs": {
+    "Classification": {
+      "enum": [
+        "NEGOCIO",
+        "INFRAESTRUCTURA",
+        "MIXTO",
+        "DESCONOCIDO"
+      ],
+      "title": "Classification",
+      "type": "string"
+    },
+    "Dependency": {
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "from_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From Unit"
+        },
+        "resolved": {
+          "default": false,
+          "title": "Resolved",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "title": "Dependency",
+      "type": "object"
+    },
+    "Metrics": {
+      "properties": {
+        "loc": {
+          "title": "Loc",
+          "type": "integer"
+        },
+        "units": {
+          "title": "Units",
+          "type": "integer"
+        },
+        "avg_complexity": {
+          "title": "Avg Complexity",
+          "type": "number"
+        },
+        "max_complexity": {
+          "title": "Max Complexity",
+          "type": "integer"
+        },
+        "dead_units": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Dead Units",
+          "type": "array"
+        }
+      },
+      "required": [
+        "loc",
+        "units",
+        "avg_complexity",
+        "max_complexity"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "NeutralType": {
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/TypeKind"
+        },
+        "precision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Precision"
+        },
+        "scale": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scale"
+        },
+        "rounding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rounding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "signed": {
+          "default": true,
+          "title": "Signed",
+          "type": "boolean"
+        },
+        "bits": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bits"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NeutralType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/NeutralType"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fields"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "NeutralType",
+      "type": "object"
+    },
+    "RiskItem": {
+      "properties": {
+        "unit_id": {
+          "title": "Unit Id",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "unit_id",
+        "level",
+        "reasons"
+      ],
+      "title": "RiskItem",
+      "type": "object"
+    },
+    "Rounding": {
+      "description": "Modo de redondeo al ASIGNAR un valor (no en intermedios).",
+      "enum": [
+        "HALF_UP",
+        "HALF_EVEN",
+        "HALF_DOWN",
+        "DOWN",
+        "UP",
+        "FLOOR",
+        "CEILING"
+      ],
+      "title": "Rounding",
+      "type": "string"
+    },
+    "TypeKind": {
+      "enum": [
+        "decimal",
+        "integer",
+        "float",
+        "string",
+        "date",
+        "datetime",
+        "boolean",
+        "enum",
+        "list",
+        "record"
+      ],
+      "title": "TypeKind",
+      "type": "string"
+    },
+    "Unit": {
+      "description": "Unidad de código: párrafo COBOL, procedimiento PL/SQL, método C#...",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/UnitKind"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "calls": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Calls",
+          "type": "array"
+        },
+        "reads": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Reads",
+          "type": "array"
+        },
+        "writes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Writes",
+          "type": "array"
+        },
+        "classification": {
+          "$ref": "#/$defs/Classification",
+          "default": "DESCONOCIDO"
+        },
+        "complexity": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Complexity",
+          "type": "integer"
+        },
+        "notes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "file",
+        "start_line",
+        "end_line"
+      ],
+      "title": "Unit",
+      "type": "object"
+    },
+    "UnitKind": {
+      "enum": [
+        "program",
+        "section",
+        "paragraph",
+        "package",
+        "procedure",
+        "function",
+        "trigger",
+        "class",
+        "method",
+        "block",
+        "other"
+      ],
+      "title": "UnitKind",
+      "type": "string"
+    },
+    "Variable": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "declared_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declared Type"
+        },
+        "neutral_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NeutralType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "line": {
+          "title": "Line",
+          "type": "integer"
+        },
+        "is_constant": {
+          "default": false,
+          "title": "Is Constant",
+          "type": "boolean"
+        },
+        "initial_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Initial Value"
+        }
+      },
+      "required": [
+        "name",
+        "file",
+        "line"
+      ],
+      "title": "Variable",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "language": {
+      "title": "Language",
+      "type": "string"
+    },
+    "dialect": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dialect"
+    },
+    "parser": {
+      "title": "Parser",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "units": {
+      "items": {
+        "$ref": "#/$defs/Unit"
+      },
+      "title": "Units",
+      "type": "array"
+    },
+    "variables": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Variable"
+      },
+      "title": "Variables",
+      "type": "array"
+    },
+    "dependencies": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Dependency"
+      },
+      "title": "Dependencies",
+      "type": "array"
+    },
+    "metrics": {
+      "$ref": "#/$defs/Metrics"
+    },
+    "risks": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RiskItem"
+      },
+      "title": "Risks",
+      "type": "array"
+    },
+    "confidence_penalty": {
+      "default": 0.0,
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence Penalty",
+      "type": "number"
+    }
+  },
+  "required": [
+    "language",
+    "parser",
+    "files",
+    "units",
+    "metrics"
+  ],
+  "title": "AnalysisResult",
+  "type": "object"
+}

@@ -1,0 +1,375 @@
+{
+  "$defs": {
+    "NeutralType": {
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/TypeKind"
+        },
+        "precision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Precision"
+        },
+        "scale": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scale"
+        },
+        "rounding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rounding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "signed": {
+          "default": true,
+          "title": "Signed",
+          "type": "boolean"
+        },
+        "bits": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bits"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        },
+        "item": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NeutralType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/NeutralType"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fields"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "NeutralType",
+      "type": "object"
+    },
+    "Review": {
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "by"
+      ],
+      "title": "Review",
+      "type": "object"
+    },
+    "Rounding": {
+      "description": "Modo de redondeo al ASIGNAR un valor (no en intermedios).",
+      "enum": [
+        "HALF_UP",
+        "HALF_EVEN",
+        "HALF_DOWN",
+        "DOWN",
+        "UP",
+        "FLOOR",
+        "CEILING"
+      ],
+      "title": "Rounding",
+      "type": "string"
+    },
+    "RuleCategory": {
+      "enum": [
+        "CALCULO",
+        "VALIDACION",
+        "DECISION",
+        "CONSTANTE"
+      ],
+      "title": "RuleCategory",
+      "type": "string"
+    },
+    "RuleStatus": {
+      "enum": [
+        "PENDIENTE",
+        "APROBADA",
+        "AJUSTADA",
+        "RECHAZADA"
+      ],
+      "title": "RuleStatus",
+      "type": "string"
+    },
+    "SourceRef": {
+      "properties": {
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "lines": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Lines",
+          "type": "array"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snippet"
+        }
+      },
+      "required": [
+        "file",
+        "unit",
+        "lines"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "TypeKind": {
+      "enum": [
+        "decimal",
+        "integer",
+        "float",
+        "string",
+        "date",
+        "datetime",
+        "boolean",
+        "enum",
+        "list",
+        "record"
+      ],
+      "title": "TypeKind",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "id": {
+      "pattern": "^BR-\\d{3,}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "category": {
+      "$ref": "#/$defs/RuleCategory"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "condition": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Condition"
+    },
+    "action": {
+      "title": "Action",
+      "type": "string"
+    },
+    "decision_table": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Table"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceRef"
+    },
+    "variables": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "title": "Variables",
+      "type": "object"
+    },
+    "result_type": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NeutralType"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "confidence_reason": {
+      "title": "Confidence Reason",
+      "type": "string"
+    },
+    "assumptions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "gherkin": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Gherkin"
+    },
+    "status": {
+      "$ref": "#/$defs/RuleStatus",
+      "default": "PENDIENTE"
+    },
+    "review": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Review"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "category",
+    "description",
+    "action",
+    "source",
+    "confidence",
+    "confidence_reason"
+  ],
+  "title": "Rule",
+  "type": "object"
+}

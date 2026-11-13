@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- AgenTCS ---
+# Paquetes de migración generados por cada ejecución
+output/*
+!output/.gitkeep
+# Imagen exportada para la demo (docker save)
+*.tar
+# Destinos generados: Node y .NET
+node_modules/
+bin/
+obj/

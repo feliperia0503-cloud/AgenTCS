@@ -1,0 +1,148 @@
+{
+  "$defs": {
+    "Difference": {
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "expected": {
+          "title": "Expected"
+        },
+        "actual": {
+          "title": "Actual"
+        },
+        "rule_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Rule Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "field",
+        "expected",
+        "actual"
+      ],
+      "title": "Difference",
+      "type": "object"
+    },
+    "OracleLevel": {
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ],
+      "title": "OracleLevel",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "source_language": {
+      "title": "Source Language",
+      "type": "string"
+    },
+    "target_language": {
+      "title": "Target Language",
+      "type": "string"
+    },
+    "oracle_level": {
+      "$ref": "#/$defs/OracleLevel"
+    },
+    "oracle_description": {
+      "title": "Oracle Description",
+      "type": "string"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "passed": {
+      "title": "Passed",
+      "type": "integer"
+    },
+    "differences": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Difference"
+      },
+      "title": "Differences",
+      "type": "array"
+    },
+    "coverage_lines": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Coverage Lines"
+    },
+    "coverage_branches": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Coverage Branches"
+    },
+    "critical_findings": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Critical Findings"
+    },
+    "max_complexity": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Complexity"
+    },
+    "attempt": {
+      "default": 1,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_language",
+    "target_language",
+    "oracle_level",
+    "oracle_description",
+    "total",
+    "passed"
+  ],
+  "title": "VerificationReport",
+  "type": "object"
+}
