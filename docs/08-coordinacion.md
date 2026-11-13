@@ -67,6 +67,30 @@ errores con `code/message/action` (`PAIRS_INVALID`, `PAIRS_MISMATCH`, `PAIRS_TOO
 El ADR-007 dice que la imagen agrega `php-cli`, `fp-compiler` y `mono-runtime`, pero el Dockerfile de `main`
 solo instala `gnucobol` y `mono-mcs`. Sin ellos, Delphi y PHP caen siempre a nivel C dentro de Docker.
 
+### C-3 · Corridas reales de B (las ejecuta la Máquina C, que tiene Docker) — HACER DESPUÉS del último cambio de prompts
+La caché en `output/llm_cache` es de una corrida vieja (COBOL→Python, antes de ADR-007): con los prompts actuales
+no coincide y el modo replay fallaría. Regenerarla al final. Requiere `.env` con la API key (nunca en git).
+Una corrida por destino; si llega al 100 %, no repetirla.
+```powershell
+docker compose build
+docker compose run --rm copilot python -m pytest -q
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target java --auto-approve
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/PAGOMIN.cbl --target typescript --auto-approve
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target csharp --auto-approve
+docker compose run --rm -e AGENTCS_LLM_REPLAY=1 copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target java --auto-approve
+```
+Cada corrida deja `output/runs/<id>/package.zip` con `reports/executive-summary.md`: de ahí salen los datos
+`[PENDIENTE]` de `docs/informe-ejecutivo.md`. Si una corrida no llega al 100 %, enviar a B la salida de consola.
+
+### C-4 · Interfaz para el nivel B (dueña: Máquina C)
+Agregar en la pantalla de reglas (antes de "Aprobar especificación") un campo opcional "Pares esperados (.json)"
+que haga `POST /api/runs/{id}/expected` (multipart, campo `file`). Respuesta: `{pairs, validated_against_spec, note}`;
+errores con `code/message/action` (`PAIRS_INVALID`, `PAIRS_MISMATCH`, `PAIRS_TOO_LATE`). Formato en `samples/README.md`.
+
+### A-4 · Dockerfile: runtimes que declara ADR-007 (dueña: Máquina A)
+El ADR-007 dice que la imagen agrega `php-cli`, `fp-compiler` y `mono-runtime`, pero el Dockerfile de `main`
+solo instala `gnucobol` y `mono-mcs`. Sin ellos, Delphi y PHP caen siempre a nivel C dentro de Docker.
+
 ### C-1 · Interfaz (dueña: Máquina C) — informativo
 Nuevos códigos de error en la ingesta: `REPO_HOST_BLOCKED` y `REPO_HOST_UNRESOLVED`. Llegan con `message`
 y `action` como los demás; no requieren cambios si la UI ya muestra ambos campos.
