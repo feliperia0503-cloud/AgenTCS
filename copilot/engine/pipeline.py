@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from copilot.contracts import AnalysisResult, CaseOutput, Phase, RunState, SourceFile, VerificationReport
+from copilot.contracts import AnalysisResult, Case, CaseOutput, Phase, RunState, SourceFile, VerificationReport
 from copilot.languages.registry import get_source, get_target
 
 from .extractor import extract_spec
@@ -91,8 +91,9 @@ class Engine:
         save(state)
 
     # ------------------------------------------------------------ después del HITL
-    def generate_and_verify(self, state: RunState, save: Save,
-                            provided: list[CaseOutput] | None = None) -> LoopResult:
+    def generate_and_verify(self, state: RunState, save: Save, provided: list[CaseOutput] | None = None,
+                            pairs: list[tuple[Case, CaseOutput]] | None = None) -> LoopResult:
+        """pairs: pares E/S del usuario (oráculo nivel B). Si llegan, son los casos de prueba."""
         self.llm.recorder = state.llm_calls.append
         target = get_target(state.target_language)
         run_dir = self.output_root / "runs" / state.run_id
@@ -106,7 +107,11 @@ class Engine:
         state.start(Phase.VERIFICACION)
         state.phases[Phase.VERIFICACION].gate_message = "Generando casos de prueba y oráculo"
         save(state)
-        state.cases = generate_cases(self.llm, state.spec)
+        if pairs:
+            state.cases = [case for case, _ in pairs]
+            provided = [expected for _, expected in pairs]
+        else:
+            state.cases = generate_cases(self.llm, state.spec)
         source = get_source(state.source_language)
         oracle = compute_expected(state.spec, state.cases, workdir=run_dir / "oracle", llm=self.llm,
                                   runner=source.runner if source else None, files=state.files, provided=provided)

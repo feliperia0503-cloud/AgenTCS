@@ -1,0 +1,40 @@
+# Reglas locales de Semgrep para el código GENERADO (sin internet: no usa el registro público).
+# Se enfocan en lo que más daña una migración financiera: punto flotante en dinero, secretos y eval.
+rules:
+  - id: agentcs.money-float-java-csharp
+    languages: [generic]
+    paths:
+      include: ["*.java", "*.cs"]
+    severity: ERROR
+    message: "Tipo de punto flotante (double/float). El dinero debe usar BigDecimal / decimal con escala explícita."
+    pattern-regex: '\b(double|float)\s+[A-Za-z_]\w*\s*[=;,)]'
+
+  - id: agentcs.money-float-typescript
+    languages: [generic]
+    paths:
+      include: ["*.ts"]
+    severity: ERROR
+    message: "parseFloat / toFixed sobre importes pierde precisión. Usa Decimal (decimal.js)."
+    pattern-regex: '\b(parseFloat\s*\(|\.toFixed\s*\()'
+
+  - id: agentcs.money-float-python
+    languages: [generic]
+    paths:
+      include: ["*.py"]
+    severity: ERROR
+    message: "float() pierde precisión en importes. Usa Decimal con quantize y modo de redondeo explícito."
+    pattern-regex: '\bfloat\s*\('
+
+  - id: agentcs.hardcoded-secret
+    languages: [generic]
+    severity: ERROR
+    message: "Posible credencial escrita en el código. Léela de variables de entorno o de un gestor de secretos."
+    pattern-regex: '(?i)\b(password|passwd|pwd|secret|api[_-]?key|token)\b\s*[:=]\s*["''][^"''\s]{6,}["'']'
+
+  - id: agentcs.dynamic-eval
+    languages: [generic]
+    paths:
+      include: ["*.py", "*.ts", "*.js"]
+    severity: WARNING
+    message: "Ejecución dinámica de código (eval/exec). Evítala en lógica de negocio."
+    pattern-regex: '\b(eval|exec)\s*\('

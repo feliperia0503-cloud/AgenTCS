@@ -8,8 +8,8 @@ sección de pedidos, nunca como cambios directos a archivos ajenos.
 | Máquina | Rol | Rama | Hecho | En curso | Bloqueado por |
 |---|---|---|---|---|---|
 | A | Origen, oráculo, Dockerfile | — | — | — | — |
-| B | Verificación de punta a punta y destinos | `maquina-b/e2e-real` | (1) `.gitattributes` LF. (2) `samples/` con 3 programas sintéticos (COBOL INTMORA y PAGOMIN, PL/SQL comisión) y casos de referencia. (5a) Pack C# revisado: enteros llegaban como `decimal` al código generado (corregido), fechas/enums en el arnés, se excluyen `Tests/` y `Program.cs`, sin servidores de compilación. (6) Anti-SSRF en `sources.py` (localhost, IPs privadas, 169.254.x.x, CGNAT, IP fijada con `curloptResolve`, sin redirecciones). `.sql` con PL/SQL se detecta como `plsql`. `.gitignore` permite `output/llm_cache/`. Pruebas: 100 pasan, 2 omitidas (C# y HTTP sin .NET/FastAPI local). | (3) Corrida real Java → TypeScript con `samples/`. (4) Commit de la caché. (5b) C# dentro de Docker. | Nada por el Dockerfile (C-0 resuelto por C). Riesgo abierto C-2 si la corrida pasa por el proxy de TCS. |
-| C | Interfaz y documentación | `maquina-c/ux-docs` | Finalizado: UI y documentación; fallback demo visible; TLS de runtime; errores del proveedor accionables; ejecución generada sin privilegios y con entorno filtrado. Validación final: build Vite verde, 116 pruebas pasan (2 omitidas), handshake TLS 1.3 y demo E2E 6/6 con paquete HTTP 200. | — | — |
+| B | Verificación de punta a punta y destinos | `maquina-b/nivel-b-reportes` | Ronda 1 (en main): `.gitattributes`, `samples/`, fix enteros pack C#, anti-SSRF, `.sql`→`plsql`, caché versionable. Ronda 2: **oráculo nivel B** (`POST /api/runs/{id}/expected` y CLI `--expected`; los pares son los casos y el oráculo), **paquete** con `reports/executive-summary.md` (1 página por corrida), `reports/security.md/.json` (gitleaks + Semgrep con reglas locales, sin internet; si falta una herramienta se declara escaneo incompleto). 126 pruebas pasan, 7 omitidas (sin cobc/fpc/mono/.NET/FastAPI/semgrep locales). | — | Corridas reales C-3 (las ejecuta C). |
+| C | Interfaz y documentación | `maquina-c/ux-docs` | Finalizado: UI de verificación, informe ejecutivo, guion de demo y guía/plantilla de prueba externa. Build Vite verde; 72 pruebas pasan en Docker. | — | — |
 
 ## Pedidos a otras máquinas
 
@@ -42,6 +42,30 @@ La imagen final conserva los certificados corporativos y define `SSL_CERT_FILE` 
 contra el almacén del sistema. Se verificó desde el contenedor un handshake TLS 1.3 con el proveedor sin
 desactivar la validación. El cliente también limita tiempo y reintentos mediante
 `AGENTCS_LLM_TIMEOUT_S` y `AGENTCS_LLM_MAX_RETRIES`, con errores y acciones explícitas para la UI.
+
+### C-3 · Corridas reales de B (las ejecuta la Máquina C, que tiene Docker) — HACER DESPUÉS del último cambio de prompts
+La caché en `output/llm_cache` es de una corrida vieja (COBOL→Python, antes de ADR-007): con los prompts actuales
+no coincide y el modo replay fallaría. Regenerarla al final. Requiere `.env` con la API key (nunca en git).
+Una corrida por destino; si llega al 100 %, no repetirla.
+```powershell
+docker compose build
+docker compose run --rm copilot python -m pytest -q
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target java --auto-approve
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/PAGOMIN.cbl --target typescript --auto-approve
+docker compose run --rm copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target csharp --auto-approve
+docker compose run --rm -e AGENTCS_LLM_REPLAY=1 copilot python -m copilot.engine migrate --source samples/cobol/INTMORA.cbl --target java --auto-approve
+```
+Cada corrida deja `output/runs/<id>/package.zip` con `reports/executive-summary.md`: de ahí salen los datos
+`[PENDIENTE]` de `docs/informe-ejecutivo.md`. Si una corrida no llega al 100 %, enviar a B la salida de consola.
+
+### C-4 · Interfaz para el nivel B (dueña: Máquina C)
+Agregar en la pantalla de reglas (antes de "Aprobar especificación") un campo opcional "Pares esperados (.json)"
+que haga `POST /api/runs/{id}/expected` (multipart, campo `file`). Respuesta: `{pairs, validated_against_spec, note}`;
+errores con `code/message/action` (`PAIRS_INVALID`, `PAIRS_MISMATCH`, `PAIRS_TOO_LATE`). Formato en `samples/README.md`.
+
+### A-4 · Dockerfile: runtimes que declara ADR-007 (dueña: Máquina A)
+El ADR-007 dice que la imagen agrega `php-cli`, `fp-compiler` y `mono-runtime`, pero el Dockerfile de `main`
+solo instala `gnucobol` y `mono-mcs`. Sin ellos, Delphi y PHP caen siempre a nivel C dentro de Docker.
 
 ### C-1 · Interfaz (dueña: Máquina C) — informativo
 Nuevos códigos de error en la ingesta: `REPO_HOST_BLOCKED` y `REPO_HOST_UNRESOLVED`. Llegan con `message`
