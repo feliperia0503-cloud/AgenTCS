@@ -8,8 +8,16 @@
 # ---------------------------------------------------------------- etapa 1: interfaz
 FROM node:22-slim AS ui
 WORKDIR /ui
+COPY docker/certs/*.crt /usr/local/share/ca-certificates/
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY ui/package.json ui/package-lock.json ./
-RUN npm ci
+RUN NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm ci --no-audit --no-fund \
+    && rm -f /usr/local/share/ca-certificates/AZRGAIDROOTCA-CA.crt \
+             /usr/local/share/ca-certificates/AI-AZRGAIDSUBCA1-CA-1.crt \
+             /usr/local/share/ca-certificates/aiproxy.tcs.in.crt \
+    && update-ca-certificates --fresh
 COPY ui/ ./
 RUN npm run build
 
@@ -23,12 +31,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     AGENTCS_OUTPUT=/app/output
 
+COPY docker/certs/*.crt /usr/local/share/ca-certificates/
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gnucobol mono-mcs \
         openjdk-21-jdk-headless maven \
         nodejs npm \
         dotnet-sdk-8.0 \
         python3 python3-venv git curl ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # uv para gestionar Python rápido
@@ -42,10 +52,10 @@ RUN curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAK
 # Dependencias de Python (capa cacheada)
 WORKDIR /app
 COPY requirements.txt .
-RUN uv venv /opt/venv && uv pip install --no-cache -r requirements.txt
+RUN uv venv /opt/venv && UV_SYSTEM_CERTS=true uv pip install --no-cache -r requirements.txt
 
 # TypeScript global para los proyectos destino Node
-RUN npm install -g typescript
+RUN NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm install -g typescript
 
 # Código del proyecto + interfaz compilada
 COPY . .
@@ -56,9 +66,17 @@ COPY --from=ui /ui/dist /app/ui/dist
 RUN if [ -f copilot/languages/java/templates/pom.xml ]; then \
       mvn -q -f copilot/languages/java/templates/pom.xml dependency:go-offline; fi \
  && if [ -f copilot/languages/typescript/templates/package.json ]; then \
-      cd copilot/languages/typescript/templates && npm ci; fi \
+      cd copilot/languages/typescript/templates \
+      && NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm ci; fi \
  && if ls copilot/languages/csharp/templates/*.sln >/dev/null 2>&1; then \
-      dotnet restore copilot/languages/csharp/templates; fi
+      dotnet restore copilot/languages/csharp/templates; fi \
+ && rm -f /usr/local/share/ca-certificates/AZRGAIDROOTCA-CA.crt \
+          /usr/local/share/ca-certificates/AI-AZRGAIDSUBCA1-CA-1.crt \
+          /usr/local/share/ca-certificates/aiproxy.tcs.in.crt \
+ && rm -rf /app/docker/certs \
+ && update-ca-certificates --fresh
+
+ENV SEMGREP_ENABLE_VERSION_CHECK=0
 
 EXPOSE 8000
 CMD ["uvicorn", "copilot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
