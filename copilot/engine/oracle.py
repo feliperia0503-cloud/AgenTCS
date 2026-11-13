@@ -45,6 +45,8 @@ def _level_a(runner: LegacyRunner, spec: Spec, files: list[SourceFile], cases: l
     harness = runner.harness_code() if hasattr(runner, "harness_code") else None
     attempts = getattr(runner, "attempts", 0)
     detail = f" Arnés de ejecución generado y verificado en {attempts} intento(s)." if attempts else ""
+    if skipped := getattr(runner, "skipped", None):
+        detail += f" {len(skipped)} caso(s) descartado(s) porque sus datos no caben en el esquema real."
     return OracleResult(OracleLevel.A, "Legacy ejecutado en el sandbox sin modificar (comportamiento real)." + detail,
                         outputs, harness)
 

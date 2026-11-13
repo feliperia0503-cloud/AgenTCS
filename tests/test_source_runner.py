@@ -305,7 +305,8 @@ def test_implied_inputs_are_zero_padded():
 def test_registry_exposes_declarative_source_packs():
     assert {"cobol", "php", "delphi", "plsql", "csharp-legacy", "java-legacy"} <= set(available_sources())
     assert get_source("sql") is get_source("plsql")               # alias de la ingesta
-    assert get_source("plsql").runner is None                     # sin Oracle: nivel B/C declarado
+    assert get_source("rpg").runner is None                       # sin compilador: nivel B/C declarado
+    assert get_source("plsql").runner is not None                 # PL/SQL: Oracle real (perfil oracle)
     assert "TRUNCAN" in get_source("cobol").knowledge()           # la semántica llega al extractor
 
 

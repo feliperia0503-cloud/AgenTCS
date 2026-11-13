@@ -103,6 +103,27 @@ def decide_rule(run_id: str, rule_id: str, body: RuleDecision) -> RunState:
     return service.decide_rule(run_id, rule_id, body.action, body.by, body.comment, body.changes)
 
 
+class NewRule(BaseModel):
+    by: str
+    kind: str                      # documenta_legacy | cambio_negocio
+    name: str
+    category: str                  # CALCULO | VALIDACION | DECISION | CONSTANTE
+    description: str
+    condition: str | None = None
+    action: str
+    file: str
+    start_line: int
+    end_line: int
+    comment: str
+
+
+@app.post("/api/runs/{run_id}/rules", response_model=RunState)
+def add_rule(run_id: str, body: NewRule) -> RunState:
+    """HITL: el experto agrega una regla citando líneas reales del legacy."""
+    return service.add_rule(run_id, body.by, body.kind, body.name, body.category, body.description, body.action,
+                            body.file, body.start_line, body.end_line, body.comment, body.condition)
+
+
 @app.post("/api/runs/{run_id}/approve", response_model=RunState)
 def approve(run_id: str, body: Approval) -> RunState:
     return service.approve_spec(run_id, body.by)

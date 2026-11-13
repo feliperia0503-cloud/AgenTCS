@@ -25,7 +25,7 @@ los registra.
 | delphi (alias pascal) | Free Pascal en modo Delphi | A (lógica sin VCL) |
 | csharp-legacy | Mono (`mcs` + `mono`) | A |
 | java-legacy | JDK (`javac` + `java`) | A |
-| plsql (alias sql) | — (requiere Oracle) | B / C |
+| plsql (alias sql) | Oracle Free (`docker compose --profile oracle`) | A con Oracle; si no, C declarado |
 | rpg, vb6 (alias vbnet) | — | B / C |
 
 ### El LLM escribe solo el arnés; la plataforma hace todo lo determinista (`source_runner.py`)
@@ -56,6 +56,25 @@ El plan del arnés se guarda en `OracleResult.reference_code` para auditoría.
   probar que el arnés no contenga lógica propia; por eso es mínimo, se guarda y se muestra para revisión.
 - (−) Programas que leen archivos, bases de datos o pantallas (CICS, VCL) necesitan más trabajo: hoy caen a C.
 - La imagen Docker agrega `php-cli`, `fp-compiler` y `mono-runtime`.
+
+## PL/SQL con tablas (`oracle_runner.py`)
+El caso real de la demo es un script PL/SQL completo: DDL de tablas, paquetes, funciones y lógica que lee y
+modifica datos. Sin tocar los contratos congelados:
+- El extractor declara cada tabla que la rutina lee o modifica como `Entity(kind="tabla")` con las columnas
+  usadas. Los parámetros de la rutina son `io.inputs`; los efectos relevantes sobre tablas son salidas
+  escalares (p. ej. `estado_final`).
+- Cada caso trae el estado inicial de la base en `input["_tablas"]` = `{"TABLA": [filas]}`. El generador de
+  casos también busca fronteras en columnas de tabla (en PL/SQL las condiciones suelen estar sobre datos).
+- Nivel A: esquema temporal por intento, script tal cual (división estilo SQL*Plus; solo se quita el prefijo
+  de esquema, y se declara), verificación de `USER_ERRORS`, FK deshabilitadas para cargar filas de prueba
+  (los triggers siguen activos), por caso `DELETE` + `INSERT` deterministas, bloque anónimo del LLM con
+  binds `:entrada` que solo puede invocar el legacy y leer (prohibido DML/DDL/SQL dinámico), salida por
+  `DBMS_OUTPUT` con el protocolo `@@`, `ROLLBACK`, y al final `DROP USER CASCADE`.
+- Errores no capturados (`RAISE_APPLICATION_ERROR`) se convierten en el código del contrato, sin importar si
+  el contrato lo escribe `ORA-20001`, `-20001` o `20001`.
+- Destinos: si el caso trae `_tablas`, el código migrado usa un repositorio en memoria detrás de un puerto del
+  dominio; el adaptador real de base de datos va en `infrastructure/`.
+- Credenciales de Oracle solo en variables de entorno; el sandbox del código generado no las hereda.
 
 ## Corrección asociada
 `loop.py` marcaba una REGRESIÓN solo si el intento no mejoraba la similitud. Ahora cualquier caso que pasó

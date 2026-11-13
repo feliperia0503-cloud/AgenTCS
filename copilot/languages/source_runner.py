@@ -132,18 +132,11 @@ def normalize(raw: str, t: NeutralType | None, fmt: str = "plain") -> Any:
     s = raw.strip()
     if t is None or t.kind in (TypeKind.STRING, TypeKind.ENUM):
         return raw.rstrip()
+    if t.kind in (TypeKind.DATE, TypeKind.DATETIME):
+        return s
     if t.kind == TypeKind.BOOLEAN:
         return s.upper() in {"1", "TRUE", "T", "Y", "S", "SI", "YES"}
-    sign = ""
-    if s.endswith(("-", "+")):                       # signo al final (PIC ...-)
-        sign, s = ("-" if s[-1] == "-" else ""), s[:-1]
-    if s.startswith(("-", "+")):
-        sign, s = ("-" if s[0] == "-" else sign), s[1:]
-    s = s.replace(" ", "").replace(",", "").replace("$", "")
-    try:
-        number = Decimal(sign + s) if s else Decimal(0)
-    except InvalidOperation as exc:
-        raise HarnessFailure(f"valor no numérico {raw!r}") from exc
+    number = _parse_number(raw, s)
     if t.kind == TypeKind.INTEGER:
         return int(number)
     if t.kind == TypeKind.DECIMAL:
@@ -154,6 +147,20 @@ def normalize(raw: str, t: NeutralType | None, fmt: str = "plain") -> Any:
             number = number.quantize(Decimal(10) ** -scale)
         return format(number, "f")
     return s
+
+
+def _parse_number(raw: str, s: str) -> Decimal:
+    """Admite signo al final (PIC ...-), signo inicial, espacios, separador de miles y símbolo $."""
+    sign = ""
+    if s.endswith(("-", "+")):
+        sign, s = ("-" if s[-1] == "-" else ""), s[:-1]
+    if s.startswith(("-", "+")):
+        sign, s = ("-" if s[0] == "-" else sign), s[1:]
+    s = s.replace(" ", "").replace(",", "").replace("$", "")
+    try:
+        return Decimal(sign + s) if s else Decimal(0)
+    except InvalidOperation as exc:
+        raise HarnessFailure(f"valor no numérico {raw!r}") from exc
 
 
 def parse_driver(stdout: str, spec: Spec, plan: HarnessPlan) -> CaseOutput | dict:
@@ -206,10 +213,17 @@ def parse_direct(stdout: str, spec: Spec, plan: HarnessPlan) -> dict:
     return {"rows": rows}
 
 
+def _match_code(code: str, known: dict[str, str]) -> str | None:
+    """-20001, ORA-20001 y 20001 son el mismo error: se usa la forma que declara el contrato."""
+    digits = re.sub(r"\D", "", code)
+    return next((k for k in known if digits and re.sub(r"\D", "", k) == digits), None)
+
+
 def to_case_output(case_id: str, parsed: dict, spec: Spec) -> CaseOutput:
     if "error" in parsed:
         code, msg = parsed["error"]
         known = {e.code: e.message for e in spec.io.errors}
+        code = code if code in known else _match_code(code, known) or code
         return CaseOutput(id=case_id, error=CaseError(code=code, message=known.get(code, msg)))
     rows = parsed["rows"]
     if spec.io.output_is_list:

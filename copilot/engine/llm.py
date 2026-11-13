@@ -48,12 +48,13 @@ class AnthropicLLM:
     """Claude vía SDK oficial. Lee primero la caché en disco; con replay=True SOLO usa la caché."""
 
     def __init__(self, model: str | None = None, *, cache_dir: Path | None = None,
-                 replay: bool | None = None, max_tokens: int = 16000,
+                 replay: bool | None = None, max_tokens: int | None = None,
                  client: Any = None, recorder: CallRecorder | None = None):
         self.model = model or os.environ.get("AGENTCS_MODEL", DEFAULT_MODEL)
         self.cache_dir = cache_dir or Path(os.environ.get("AGENTCS_OUTPUT", "output")) / "llm_cache"
         self.replay = os.environ.get("AGENTCS_LLM_REPLAY") == "1" if replay is None else replay
-        self.max_tokens = max_tokens
+        # Paquetes legacy grandes producen proyectos destino largos: 32k tokens de salida por defecto, con streaming.
+        self.max_tokens = max_tokens or int(os.environ.get("AGENTCS_MAX_TOKENS", "32000"))
         self.recorder = recorder
         self.tokens_used = 0
         self._client = client
@@ -70,9 +71,7 @@ class AnthropicLLM:
                            "Ejecuta una vez con conexión y ANTHROPIC_API_KEY para poblar output/llm_cache.")
         start = time.monotonic()
         try:
-            response = self._sdk().messages.create(
-                model=self.model, max_tokens=self.max_tokens, system=system,
-                messages=[{"role": "user", "content": prompt}])
+            response = self._request(system, prompt)
         except Exception as exc:
             error_name = type(exc).__name__
             if error_name == "APITimeoutError":
@@ -89,6 +88,9 @@ class AnthropicLLM:
                                "Espera y reintenta, o usa el modo demo/replay.") from exc
             raise
         text = "".join(getattr(b, "text", "") for b in response.content)
+        if getattr(response, "stop_reason", None) == "max_tokens":
+            raise LLMError("OUTPUT_TRUNCATED", f"La respuesta superó el límite de {self.max_tokens} tokens y quedó cortada.",
+                           "Pide archivos más compactos o sube AGENTCS_MAX_TOKENS.")
         usage = getattr(response, "usage", None)
         tin, tout = getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -107,6 +109,16 @@ class AnthropicLLM:
             max_retries = max(0, int(os.environ.get("AGENTCS_LLM_MAX_RETRIES", "1")))
             self._client = anthropic.Anthropic(timeout=timeout_s, max_retries=max_retries)
         return self._client
+
+    def _request(self, system: str, prompt: str) -> Any:
+        """Con streaming cuando el SDK lo ofrece: evita el corte por tiempo en respuestas largas."""
+        messages = self._sdk().messages
+        kwargs = {"model": self.model, "max_tokens": self.max_tokens, "system": system,
+                  "messages": [{"role": "user", "content": prompt}]}
+        if hasattr(messages, "stream"):
+            with messages.stream(**kwargs) as stream:
+                return stream.get_final_message()
+        return messages.create(**kwargs)
 
     def _record(self, phase: Phase, agent: str, key: str, tin: int, tout: int, secs: float, *, replayed: bool) -> None:
         self.tokens_used += tin + tout

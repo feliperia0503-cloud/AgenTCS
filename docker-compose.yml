@@ -12,6 +12,7 @@ services:
     environment:
       AGENTCS_MODE: ${AGENTCS_MODE:-demo}   # demo | real
       ORACLE_DSN: oracle:1521/FREEPDB1
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-sandbox_only}   # sandbox local; el LLM nunca la ve
     volumes:
       - ./output:/app/output   # el paquete de migración generado queda en tu carpeta
 
@@ -23,3 +24,8 @@ services:
       ORACLE_PASSWORD: ${ORACLE_PASSWORD:-sandbox_only}   # contraseña local del sandbox, sin datos reales
     ports:
       - "1521:1521"
+    healthcheck:   # el oráculo nivel A de PL/SQL espera a que Oracle esté listo (1-2 min la primera vez)
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30

@@ -368,6 +368,7 @@ function RulesView({ run, setRun, setRunError, runError, setSection, userEmail }
   const [draft, setDraft] = useState({ condition: '', action: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [adding, setAdding] = useState(false);
 
   const filtered = rules.filter(r => `${r.id} ${r.title} ${r.detail} ${r.source}`.toLowerCase().includes(query.toLowerCase()));
   const active = rules.find(r => r.id === activeId) ?? filtered[0];
@@ -409,8 +410,10 @@ function RulesView({ run, setRun, setRunError, runError, setSection, userEmail }
   };
 
   return <div className="workspace"><section className="page-heading"><div><h1>Reglas de negocio</h1><p>Revisa la lógica recuperada del código y su evidencia. Lo que apruebes es la especificación que guía la generación y las pruebas.</p></div>
-    <div className="heading-actions"><span className="demo-note">{rules.length} reglas · {pending} pendientes</span><button className="primary-button" onClick={approveSpec} disabled={!reviewOpen || pending > 0 || saving}><Icon name="check"/> Aprobar especificación y generar</button></div></section>
+    <div className="heading-actions"><span className="demo-note">{rules.length} reglas · {pending} pendientes</span>{reviewOpen && <button className="secondary-button" onClick={() => setAdding(!adding)}>+ Agregar regla</button>}<button className="primary-button" onClick={approveSpec} disabled={!reviewOpen || pending > 0 || saving}><Icon name="check"/> Aprobar especificación y generar</button></div></section>
     <ErrorBox title="No se pudo aprobar la especificación" error={runError}/>
+    <FindingsPanel run={run}/>
+    {adding && <AddRuleForm run={run} userEmail={userEmail} onCancel={() => setAdding(false)} onSaved={(state) => { setRun(state); setAdding(false); setActiveId(state.spec.rules[state.spec.rules.length - 1].id); }}/>}
     {run.spec.assumptions.length > 0 && <div className="target-guidance" role="note"><Icon name="alert" size={18}/><div><strong>Supuestos del análisis</strong><span>{run.spec.assumptions.join(' · ')}</span></div></div>}
     <div className="rules-layout"><section className="rules-catalog"><div className="filterbar"><div className="search-field"><Icon name="search"/><input placeholder="Buscar por regla, descripción o evidencia" value={query} onChange={e => setQuery(e.target.value)}/></div></div>
       <div className="catalog-head"><span>Regla</span><span>Estado</span><span>Confianza</span></div>
@@ -436,6 +439,80 @@ function RulesView({ run, setRun, setRunError, runError, setSection, userEmail }
           </div></div>}
       </aside>}</div>
   </div>;
+}
+
+
+const ROLE_LABEL = { codigo: 'Código', configuracion: 'Configuración del sistema', datos_prueba: 'Datos de prueba', ejecucion: 'Script de ejecución' };
+const CATEGORIES = ['CALCULO', 'VALIDACION', 'DECISION', 'CONSTANTE'];
+
+function FindingsPanel({ run }) {
+  const roles = run?.design?.file_roles ?? {};
+  const dead = run?.design?.dead_code ?? [];
+  const excluded = run?.design?.excluded_outputs ?? [];
+  if (!Object.keys(roles).length && !dead.length && !excluded.length) return null;
+  return <details className="findings-panel"><summary><Icon name="alert" size={18}/> Hallazgos que no son reglas · {dead.length} bloque(s) de código muerto · {excluded.length} campo(s) excluido(s)</summary>
+    {Object.keys(roles).length > 0 && <><h3>Papel de cada archivo</h3><ul className="role-list">{Object.entries(roles).map(([path, role]) => <li key={path}><code>{path}</code><em className={`role-badge ${role}`}>{ROLE_LABEL[role] ?? role}</em></li>)}</ul></>}
+    {dead.length > 0 && <><h3>Código muerto (no se migra)</h3><ul>{dead.map(d => <li key={`${d.file}-${d.lines[0]}`}><b>{d.unit}</b> · <code>{d.file}:{d.lines[0]}–{d.lines[1]}</code> — {d.reason}</li>)}</ul></>}
+    {excluded.length > 0 && <><h3>Excluido de la comparación (no determinista)</h3><ul>{excluded.map(e => <li key={e.name}><b>{e.name}</b> — {e.reason}</li>)}</ul></>}
+  </details>;
+}
+
+function AddRuleForm({ run, userEmail, onSaved, onCancel }) {
+  const files = (run?.files ?? []).filter(f => (run?.design?.file_roles ?? {})[f.path] !== 'datos_prueba');
+  const [form, setForm] = useState({ kind: 'documenta_legacy', name: '', category: 'VALIDACION', description: '', condition: '', action: '', file: files[0]?.path ?? '', start_line: 1, end_line: 1, comment: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const lines = (files.find(f => f.path === form.file)?.content ?? '').split('\n');
+  const start = Number(form.start_line) || 1;
+  const end = Number(form.end_line) || start;
+  const ready = form.name.trim() && form.action.trim() && form.comment.trim() && form.file && start >= 1 && end >= start && end <= lines.length;
+  const save = async () => {
+    setSaving(true); setError(null);
+    try { onSaved(await api.addRule(run.run_id, { ...form, by: userEmail, start_line: start, end_line: end, condition: form.condition || undefined })); }
+    catch (err) { setError({ message: err.message, action: err.action }); }
+    finally { setSaving(false); }
+  };
+  return <section className="add-rule"><h2>Agregar regla de negocio</h2>
+    <p>Toda regla debe citar las líneas del legacy donde vive. Indica si el legacy ya la cumple o si es un cambio de negocio.</p>
+    <div className="add-rule-grid">
+      <label>Tipo<select value={form.kind} onChange={set('kind')}><option value="documenta_legacy">Documenta el legacy (ya lo hace)</option><option value="cambio_negocio">Cambio de negocio (nuevo comportamiento)</option></select></label>
+      <label>Categoría<select value={form.category} onChange={set('category')}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></label>
+      <label className="span-2">Nombre<input value={form.name} onChange={set('name')} placeholder="Ej.: Tope de indemnización por evento"/></label>
+      <label className="span-2">Descripción de negocio<input value={form.description} onChange={set('description')}/></label>
+      <label>Condición (opcional)<input value={form.condition} onChange={set('condition')} placeholder="monto_reclamado > limite_cobertura"/></label>
+      <label>Acción<input value={form.action} onChange={set('action')} placeholder="monto_base = limite_cobertura"/></label>
+      <label className="span-2">Archivo legacy<select value={form.file} onChange={set('file')}>{files.map(f => <option key={f.path}>{f.path}</option>)}</select></label>
+      <label>Línea inicial<input type="number" min="1" value={form.start_line} onChange={set('start_line')}/></label>
+      <label>Línea final<input type="number" min="1" value={form.end_line} onChange={set('end_line')}/></label>
+    </div>
+    <h3>Evidencia seleccionada</h3>
+    <CodeLines content={lines.slice(start - 1, Math.min(end, start + 24)).join('\n')} startLine={start}/>
+    {form.kind === 'cambio_negocio' && <p className="target-guidance" role="note"><Icon name="alert" size={18}/><span>Los casos que ejerciten esta regla se apartan del legacy a propósito: se reportan como divergencia intencional, no como fallo.</span></p>}
+    <label>Comentario (obligatorio)<textarea rows={2} value={form.comment} onChange={set('comment')} placeholder="De dónde sale la regla y por qué"/></label>
+    <ErrorBox title="No se pudo agregar la regla" error={error}/>
+    <div className="review-actions"><button className="primary-button" disabled={!ready || saving} onClick={save}><Icon name="check"/> Agregar regla</button><button className="secondary-button" onClick={onCancel}>Cancelar</button></div>
+  </section>;
+}
+
+function OfficialRun({ run, report }) {
+  const cases = run?.cases ?? [];
+  const official = cases.find(c => (c.tags ?? []).includes('oficial'));
+  const expected = official && (run?.expected ?? []).find(o => o.id === official.id);
+  if (!official || !Array.isArray(expected?.output) || !expected.output.length) return null;
+  const columns = Object.keys(expected.output[0]);
+  const bad = new Set((report?.differences ?? []).filter(d => d.case_id === official.id).map(d => d.field));
+  const params = Object.entries(official.input).filter(([k]) => k !== '_tablas').map(([k, v]) => `${k} = ${v}`).join(' · ');
+  return <section className="official-run"><div className="table-heading"><div><h2>Ejecución oficial del cliente</h2><p>{official.description} · {params} · resultado real del legacy (golden master). Las celdas marcadas difieren en el código migrado.</p></div><span className={`test-status ${bad.size ? 'warning' : 'passed'}`}>{bad.size ? `${bad.size} diferencia(s)` : 'Equivalente'}</span></div>
+    <div className="official-table"><table><thead><tr>{columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
+      <tbody>{expected.output.map((row, i) => <tr key={i}>{columns.map(c => <td key={c} className={bad.has(`[${i}].${c}`) ? 'diff' : ''}>{row[c] ?? '—'}</td>)}</tr>)}</tbody></table></div>
+  </section>;
+}
+
+function IntentionalDivergences({ run }) {
+  const items = run?.design?.intentional_divergences ?? [];
+  if (!items.length) return null;
+  return <section className="target-guidance" role="note"><Icon name="alert" size={18}/><div><strong>Divergencias intencionales aprobadas</strong><span>{items.map(d => `${d.case} (${d.rules.join(', ')})`).join(' · ')}: ejercitan cambios de negocio y no se comparan con el legacy.</span></div></section>;
 }
 
 // ---------------------------------------------------------------- pruebas, intentos y código generado
@@ -470,6 +547,8 @@ function TestsView({ run, setSection }) {
         <div><span><b>Cobertura de código</b><em>{report.coverage_lines != null ? `${report.coverage_lines}%` : 'No medida aún'}</em></span><i><u style={{ width: `${report.coverage_lines ?? 0}%` }}/></i></div>
       </div></section>
     <OracleLegend activeLevel={report.oracle_level}/>
+    <IntentionalDivergences run={run}/>
+    <OfficialRun run={run} report={report}/>
     <section className="attempt-panel"><div className="table-heading"><div><h2>Intentos de autocorrección</h2><p>Cada intento usa como retroalimentación sus diferencias. La similitud se muestra en escala de 0 a 1.</p></div></div>
       <ol className="attempt-timeline">{attempts.map(attempt => {
         const passed = attempt.passed === attempt.total;

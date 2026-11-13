@@ -16,8 +16,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 from copilot.contracts import (
-    Phase, PhaseStatus, RuleStatus, RunMode, RunState, Spec,
+    Phase, PhaseStatus, Review, Rule, RuleCategory, RuleStatus, RunMode, RunState, SourceRef, Spec,
 )
+from copilot.engine.divergence import RULE_ORIGINS
 from copilot.security import Sanitizer
 
 from . import catalog, demo, pairs, reports, sources
@@ -179,6 +180,38 @@ class CopilotService:
         self.store.save(state)
         return state
 
+    def add_rule(self, run_id: str, by: str, kind: str, name: str, category: str, description: str, action: str,
+                 file: str, start_line: int, end_line: int, comment: str, condition: str | None = None) -> RunState:
+        """HITL: el experto agrega una regla que el extractor no vio (documenta el legacy) o un cambio de negocio.
+        Debe citar líneas reales del código legacy, como toda regla."""
+        state = self._require_review_phase(run_id)
+        if not by.strip() or not comment.strip():
+            raise ServiceError(422, "REVIEWER_REQUIRED", "Falta quién agrega la regla o el comentario.",
+                               "Indica tu nombre y explica de dónde sale la regla.")
+        if kind not in RULE_ORIGINS:
+            raise ServiceError(422, "INVALID_KIND", f"Tipo de regla desconocido: {kind}.",
+                               "Usa documenta_legacy (el legacy ya lo hace) o cambio_negocio (nuevo comportamiento).")
+        source = next((f for f in state.files if f.path == file), None)
+        if source is None or not 1 <= start_line <= end_line <= len(source.lines):
+            raise ServiceError(422, "INVALID_SOURCE_LINES", "Las líneas citadas no existen en ese archivo.",
+                               "Selecciona un archivo del legacy y un rango de líneas válido.")
+        try:
+            rule = Rule(id=f"BR-{len(state.spec.rules) + 1:03d}", name=name, category=RuleCategory(category),
+                        description=description, condition=condition or None, action=action,
+                        source=SourceRef(file=file, unit="(agregada por experto)", lines=(start_line, end_line),
+                                         snippet="\n".join(source.lines[start_line - 1:end_line])),
+                        confidence=1.0, confidence_reason=f"Agregada por {by}: conocimiento del negocio",
+                        assumptions=[RULE_ORIGINS[kind]], status=RuleStatus.APROBADA,
+                        review=Review(by=by, comment=comment))
+        except ValueError as exc:
+            raise ServiceError(422, "RULE_VALIDATION", str(exc)[:300], "Revisa nombre, categoría y acción.") from None
+        state.update_spec(state.spec.model_copy(update={"rules": [*state.spec.rules, rule]}))
+        pending = len(state.spec.pending)
+        state.wait_for_human(Phase.VALIDACION_HUMANA,
+                             f"{pending} regla(s) pendiente(s)" if pending else "Todas las reglas revisadas: lista para aprobar")
+        self.store.save(state)
+        return state
+
     def upload_expected(self, run_id: str, name: str, data: bytes) -> dict:
         """Oráculo nivel B: guarda pares E/S esperados. Solo antes de generar el código."""
         state = self.get_run(run_id)
@@ -303,6 +336,7 @@ class CopilotService:
             z.writestr("README.md", _package_readme(state))
             z.writestr("docs/business-rules.json", state.spec.model_dump_json(indent=2))
             z.writestr("docs/traceability-matrix.md", _traceability(state.spec))
+            z.writestr("docs/hallazgos.md", _findings(state))
             z.writestr("docs/sanitization.json", json.dumps(
                 [f.model_dump() for f in state.sanitization], indent=2, ensure_ascii=False))
             z.writestr("reports/analysis.json", state.analysis.model_dump_json(indent=2) if state.analysis else "{}")
@@ -349,6 +383,23 @@ class CopilotService:
             if problem:
                 raise ServiceError(422, "TARGET_CONFIG_INVALID", f"Configuración destino inválida: {problem}.",
                                    "Elige lenguaje, framework y arquitectura de las listas.")
+
+
+def _findings(state: RunState) -> str:
+    """Lo que el análisis encontró y NO es regla: papel de archivos, código muerto, campos no deterministas."""
+    d = state.design or {}
+    out = ["# Hallazgos del análisis (no son reglas)", "", "## Papel de cada archivo", ""]
+    out += [f"- `{path}`: {role}" for path, role in (d.get("file_roles") or {}).items()] or ["- (sin clasificar)"]
+    out += ["", "## Código muerto (no se migra)", ""]
+    out += [f"- `{x['file']}:{x['lines'][0]}–{x['lines'][1]}` · {x['unit']} — {x['reason']}" for x in d.get("dead_code") or []] or ["- Ninguno detectado"]
+    out += ["", "## Excluido de la comparación (no determinista)", ""]
+    out += [f"- {x['name']} — {x['reason']}" for x in d.get("excluded_outputs") or []] or ["- Ninguno"]
+    if d.get("intentional_divergences"):
+        out += ["", "## Divergencias intencionales aprobadas (cambios de negocio)", ""]
+        out += [f"- {x['case']}: {', '.join(x['rules'])} — {x['description']}" for x in d["intentional_divergences"]]
+    if d.get("oracle"):
+        out += ["", "## Oráculo", "", f"Nivel {d['oracle']['level']}: {d['oracle']['description']}"]
+    return "\n".join(out) + "\n"
 
 
 def _traceability(spec: Spec) -> str:

@@ -21,6 +21,7 @@ from copilot.contracts import (
 )
 from copilot.engine.segmenter import segment
 
+from .oracle_runner import OracleLegacyRunner
 from .source_runner import GenericLegacyRunner, RunnerConfig
 
 PACKS_DIR = Path(__file__).parent
@@ -29,9 +30,10 @@ PACKS_DIR = Path(__file__).parent
 @dataclass
 class DeclarativeSource:
     info: PackInfo
-    runner: GenericLegacyRunner | None
+    runner: GenericLegacyRunner | OracleLegacyRunner | None
     aliases: list[str]
     knowledge_text: str
+    support: str | None = None      # soporte determinista adicional (p. ej. sql_scripts)
 
     @classmethod
     def load(cls, folder: Path) -> DeclarativeSource | None:
@@ -45,11 +47,11 @@ class DeclarativeSource:
         info = PackInfo(id=meta["id"], name=meta["name"], role=PackRole(meta["role"]),
                         extensions=meta.get("extensions", []), version=str(meta.get("version", "0.1.0")),
                         oracle_level=OracleLevel.A if runner_cfg else OracleLevel.C)
-        runner = (GenericLegacyRunner(info.id, info.name, RunnerConfig.from_dict(runner_cfg))
-                  if runner_cfg else None)
+        runner = _make_runner(info, runner_cfg)
         knowledge = folder / "knowledge.md"
         return cls(info=info, runner=runner, aliases=list(meta.get("aliases", [])),
-                   knowledge_text=knowledge.read_text(encoding="utf-8") if knowledge.is_file() else "")
+                   knowledge_text=knowledge.read_text(encoding="utf-8") if knowledge.is_file() else "",
+                   support=meta.get("support"))
 
     # --- SourceAdapter
     def detect(self, files: list[SourceFile]) -> float:
@@ -74,8 +76,32 @@ class DeclarativeSource:
     def knowledge(self) -> str:
         return self.knowledge_text
 
+    # --- capacidades opcionales que el motor consulta con hasattr/getattr
+    def file_roles(self, files: list[SourceFile]) -> dict[str, str]:
+        """Papel de cada archivo: codigo | configuracion | datos_prueba | ejecucion."""
+        if self.support == "sql_scripts":
+            from . import sql_scripts
+            return sql_scripts.file_roles(files)
+        return {f.path: "codigo" for f in files}
+
+    def base_tables(self, files: list[SourceFile]) -> dict[str, list[dict]] | None:
+        """Estado inicial de la base (configuración + datos de prueba) como filas tipadas, si aplica."""
+        if self.support != "sql_scripts":
+            return None
+        from . import sql_scripts
+        data = sql_scripts.base_dataset(files)
+        return data.rows if any(data.rows.values()) else None
+
     def runtime_available(self) -> bool:
         return self.runner is not None and not self.runner.missing_tools()
+
+
+def _make_runner(info: PackInfo, cfg: dict | None):
+    if not cfg:
+        return None
+    if cfg.get("kind") == "oracle":
+        return OracleLegacyRunner(info.id, info.name)
+    return GenericLegacyRunner(info.id, info.name, RunnerConfig.from_dict(cfg))
 
 
 def load_source_packs(root: Path = PACKS_DIR) -> dict[str, DeclarativeSource]:

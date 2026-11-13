@@ -3,6 +3,9 @@ name: PL/SQL (Oracle)
 role: source
 extensions: [".pks", ".pkb", ".prc", ".fnc", ".trg", ".plsql", ".sql"]
 aliases: [sql]
-version: 0.1.0
-# Sin runner en la imagen base: ejecutarlo exige Oracle Database (perfil 'oracle' de docker compose).
-# Mientras tanto el oráculo es nivel B (pares E/S) o C (referencia desde la especificación aprobada).
+version: 0.3.0
+support: sql_scripts   # roles de archivo, orden de instalación y datos de prueba -> _tablas
+# Nivel A con Oracle real (docker compose --profile oracle): el script se ejecuta tal cual en un esquema
+# temporal, con las filas de prueba de input["_tablas"]. Sin Oracle disponible, el oráculo baja a B/C y lo declara.
+runner:
+  kind: oracle

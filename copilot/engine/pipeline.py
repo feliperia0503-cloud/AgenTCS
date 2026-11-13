@@ -10,7 +10,8 @@ from pathlib import Path
 from copilot.contracts import AnalysisResult, Case, CaseOutput, Phase, RunState, SourceFile, VerificationReport
 from copilot.languages.registry import get_source, get_target
 
-from .extractor import extract_spec
+from .divergence import change_rule_ids, split_divergent
+from .extractor import extract
 from .lessons import LessonStore
 from .llm import AnthropicLLM, LLMClient
 from .loop import AttemptRecord, LoopConfig, LoopResult, SelfCorrectingLoop
@@ -48,6 +49,22 @@ def select_for_extraction(files: list[SourceFile], analysis: AnalysisResult) -> 
     return chosen, note
 
 
+TEST_DATA_ROLE, EXECUTION_ROLE = "datos_prueba", "ejecucion"
+
+
+def file_roles(source, files: list[SourceFile]) -> dict[str, str]:
+    """Papel de cada archivo según el pack de origen; sin soporte, todo es código."""
+    if source is not None and hasattr(source, "file_roles"):
+        return source.file_roles(files)
+    return {f.path: "codigo" for f in files}
+
+
+def align_cases(cases: list[Case], expected: list[CaseOutput]) -> list[Case]:
+    """El oráculo puede descartar casos cuyos datos de prueba son inválidos para el esquema real."""
+    ids = {o.id for o in expected}
+    return [c for c in cases if c.id in ids]
+
+
 @dataclass
 class Engine:
     llm: LLMClient
@@ -75,9 +92,14 @@ class Engine:
                      message="; ".join(problems) or f"{analysis.metrics.units} unidades inventariadas con {how}")
         state.start(Phase.EXTRACCION)
         save(state)
-        selected, note = select_for_extraction(state.files, analysis)
-        spec = extract_spec(self.llm, selected, analysis, program=_program_name(state),
-                            knowledge=source.knowledge() if source else "", domain=state.domain)
+        roles = file_roles(source, state.files)
+        state.design = {**state.design, "file_roles": roles}
+        logic = [f for f in state.files if roles.get(f.path) != TEST_DATA_ROLE] or state.files
+        selected, note = select_for_extraction(logic, analysis)
+        spec, findings = extract(self.llm, selected, analysis, program=_program_name(state),
+                                 knowledge=source.knowledge() if source else "", domain=state.domain)
+        state.design = {**state.design, "dead_code": findings.dead_code, "excluded_outputs": findings.excluded}
+        analysis.metrics.dead_units = [f"{d['file']}::{d['unit']}#{d['lines'][0]}" for d in findings.dead_code]
         if note:
             spec = spec.model_copy(update={"assumptions": [note, *spec.assumptions]})
         state.update_spec(spec)
@@ -98,7 +120,7 @@ class Engine:
         target = get_target(state.target_language)
         run_dir = self.output_root / "runs" / state.run_id
         state.start(Phase.DISENO)
-        state.design = {"target": target.info.name, "framework": state.target_framework,
+        state.design = {**state.design, "target": target.info.name, "framework": state.target_framework,
                         "architecture": state.target_architecture}
         state.finish(Phase.DISENO, ok=True, message=f"{target.info.name} · {state.target_framework or 'núcleo puro'} · "
                                                     f"{state.target_architecture or 'hexagonal'}")
@@ -110,12 +132,27 @@ class Engine:
         if pairs:
             state.cases = [case for case, _ in pairs]
             provided = [expected for _, expected in pairs]
-        else:
-            state.cases = generate_cases(self.llm, state.spec)
         source = get_source(state.source_language)
+        if not pairs:
+            roles = state.design.get("file_roles") or file_roles(source, state.files)
+            base = source.base_tables(state.files) if source and hasattr(source, "base_tables") else None
+            scripts = [f.content for f in state.files if roles.get(f.path) == EXECUTION_ROLE]
+            state.cases = generate_cases(self.llm, state.spec, base_tables=base, run_scripts=scripts)
+            if base:
+                state.design = {**state.design, "base_tables": {t: len(rows) for t, rows in base.items()}}
         oracle = compute_expected(state.spec, state.cases, workdir=run_dir / "oracle", llm=self.llm,
                                   runner=source.runner if source else None, files=state.files, provided=provided)
         state.expected = oracle.outputs
+        state.cases = align_cases(state.cases, oracle.outputs)
+        comparable, divergent = split_divergent(state.spec, state.cases)
+        if divergent:
+            ids = {c.id for c in divergent}
+            state.design = {**state.design, "intentional_divergences": [
+                {"case": c.id, "rules": sorted(change_rule_ids(state.spec) & set(c.tags)), "description": c.description}
+                for c in divergent]}
+            state.cases = comparable
+            state.expected = [o for o in state.expected if o.id not in ids]
+        state.design = {**state.design, "oracle": {"level": oracle.level.value, "description": oracle.description}}
         save(state)
 
         reports: list[VerificationReport] = []

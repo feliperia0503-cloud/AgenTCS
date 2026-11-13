@@ -34,7 +34,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 COPY docker/certs/*.crt /usr/local/share/ca-certificates/
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gnucobol mono-mcs \
+        gnucobol mono-mcs php-cli fp-compiler \
         openjdk-21-jdk-headless maven \
         dotnet-sdk-8.0 \
         python3 python3-venv git curl ca-certificates \

@@ -455,3 +455,27 @@ hr { border:0; border-top:1px solid var(--line); margin:28px 0; }
 .file-tabs button { border:1px solid #cbd2cf; background:#fff; border-radius:8px; padding:6px 10px; font-size:11px; font-family:ui-monospace, Consolas, monospace; color:var(--ink); }
 .file-tabs button.active { border-color:var(--teal); background:#eaf3ef; color:#064f4c; }
 .target-guidance .text-action { margin-top:6px; }
+
+/* ---- hallazgos, agregar regla y ejecución oficial ---- */
+.findings-panel { border: 1px solid var(--line, #d9dde3); border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; background: var(--surface, #fff); }
+.findings-panel summary { cursor: pointer; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.findings-panel h3 { font-size: 0.9rem; margin: 14px 0 6px; }
+.findings-panel ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.88rem; }
+.role-list { list-style: none; padding-left: 0 !important; }
+.role-list li { display: flex; gap: 10px; align-items: center; }
+.role-badge { font-style: normal; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #eef1f5; }
+.role-badge.datos_prueba { background: #fff3d6; }
+.role-badge.ejecucion { background: #e3f0ff; }
+.role-badge.configuracion { background: #e8f6ec; }
+.add-rule { border: 1px solid var(--line, #d9dde3); border-radius: 12px; padding: 16px; margin: 0 0 16px; background: var(--surface, #fff); display: grid; gap: 10px; }
+.add-rule h2 { margin: 0; font-size: 1.1rem; }
+.add-rule p { margin: 0; }
+.add-rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.add-rule-grid .span-2 { grid-column: span 2; }
+.add-rule label { display: grid; gap: 4px; font-size: 0.85rem; }
+.official-run { margin: 16px 0; }
+.official-table { overflow-x: auto; border: 1px solid var(--line, #d9dde3); border-radius: 10px; }
+.official-table table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+.official-table th, .official-table td { padding: 6px 10px; border-bottom: 1px solid var(--line, #eceff3); text-align: left; white-space: nowrap; }
+.official-table th { background: #f6f7f9; position: sticky; top: 0; }
+.official-table td.diff { background: #ffe1e1; font-weight: 600; }

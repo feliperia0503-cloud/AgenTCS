@@ -94,6 +94,15 @@ export const api = {
    */
   decideRule: (runId, ruleId, decision) => request(`/runs/${runId}/rules/${ruleId}/decision`, json('POST', decision)),
 
+  /**
+   * HITL: el experto agrega una regla citando líneas reales del legacy.
+   * @param {string} runId
+   * @param {{ by: string, kind: 'documenta_legacy'|'cambio_negocio', name: string, category: string,
+   *           description: string, condition?: string, action: string, file: string, start_line: number,
+   *           end_line: number, comment: string }} rule
+   */
+  addRule: (runId, rule) => request(`/runs/${runId}/rules`, json('POST', rule)),
+
   /** Aprueba la especificación completa y continúa a diseño, generación y verificación. */
   approveSpec: (runId, by) => request(`/runs/${runId}/approve`, json('POST', { by })),
 

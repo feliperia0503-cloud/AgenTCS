@@ -25,8 +25,9 @@ def _equal(expected: Any, actual: Any, t: NeutralType | None) -> bool:
             return int(expected) == int(actual)
         except (TypeError, ValueError):
             return False
-    if t is not None and t.kind == TypeKind.STRING and isinstance(expected, str) and isinstance(actual, str):
-        return expected.rstrip() == actual.rstrip()   # relleno de ancho fijo del legacy
+    if t is not None and t.kind == TypeKind.STRING and all(isinstance(v, (str, type(None))) for v in (expected, actual)):
+        # relleno de ancho fijo del legacy; en Oracle '' y NULL son lo mismo
+        return (expected or "").rstrip() == (actual or "").rstrip()
     return expected == actual
 
 

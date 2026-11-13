@@ -79,10 +79,17 @@ def similarity(report: VerificationReport, expected: list[CaseOutput]) -> float:
 
 
 # ---------------------------------------------------------------- retroalimentación
+def _compact(inp: dict) -> dict:
+    """La retroalimentación no repite tablas completas: solo cuántas filas trae cada una."""
+    if "_tablas" not in inp:
+        return inp
+    return {**inp, "_tablas": {t: f"{len(rows)} fila(s)" for t, rows in (inp["_tablas"] or {}).items()}}
+
+
 def build_feedback(report: VerificationReport, spec: Spec, cases: list[Case], regressions: set[str],
                    max_cases: int) -> str:
     by_case = failing_cases(report)
-    inputs = {c.id: c.input for c in cases}
+    inputs = {c.id: _compact(c.input) for c in cases}
     by_rule: dict[str, list[str]] = {}
     for cid in list(by_case)[:max_cases]:
         diffs = by_case[cid]

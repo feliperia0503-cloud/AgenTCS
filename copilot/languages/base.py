@@ -25,6 +25,10 @@ COMMON_RULES = """Reglas comunes a todo destino:
 - Errores de negocio: devuelve {"error": {"code": "<código>", "message": "<mensaje>"}} con el MISMO
   código y mensaje del legacy (no lances excepciones para errores de negocio).
 - Comentario de trazabilidad en cada regla: `Regla BR-xxx · archivo:líneas`.
+- Acceso a datos: si `input` trae la clave "_tablas" ({"TABLA": [filas como mapas columna→valor]}), define en
+  el dominio un PUERTO (interfaz de repositorio) y, en el punto de entrada, un adaptador EN MEMORIA cargado
+  desde "_tablas" (decimales como string). El adaptador real de base de datos va en `infrastructure/`. Las
+  consultas en memoria replican la semántica del SQL legacy (filtros, orden, sumas, NULL, sin filas).
 - No escribas el arnés de pruebas ni un método main/Program: los provee la plataforma."""
 
 
