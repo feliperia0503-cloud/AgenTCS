@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgenTCS · Copiloto de Modernización de Código Legacy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1e; --ink2:#0e1630; --surface:#121c3a; --surface2:#172447;
+    --line:rgba(140,165,215,.16); --line2:rgba(140,165,215,.28);
+    --text:#eaf0fb; --muted:#9db0d4; --faint:#6d7fa6;
+    --teal:#34e2c4; --teal-d:#17b89d; --violet:#9d8cff; --amber:#ffcf6b; --rose:#ff7a9c;
+    --ok:#34e2c4; --warn:#ffcf6b;
+    --shadow:0 24px 70px -24px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Manrope',system-ui,sans-serif;background:var(--ink);color:var(--text);
+    overflow:hidden;-webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:'JetBrains Mono',monospace}
+
+  /* deck frame */
+  #deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:min(7vh,70px) min(8vw,110px);opacity:0;visibility:hidden;
+    transform:translateY(14px) scale(.995);transition:opacity .5s ease,transform .5s ease,visibility .5s;
+    background:radial-gradient(1200px 700px at 78% -10%,rgba(52,226,196,.10),transparent 60%),
+               radial-gradient(1100px 800px at -8% 110%,rgba(157,140,255,.12),transparent 55%),
+               linear-gradient(180deg,var(--ink2),var(--ink));
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none;transition-delay:.05s}
+  .slide.prev{transform:translateY(-14px) scale(.995)}
+
+  /* progress + chrome */
+  #bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--teal),var(--violet));z-index:40;transition:width .5s ease;box-shadow:0 0 18px rgba(52,226,196,.5)}
+  #chrome{position:fixed;bottom:22px;right:30px;z-index:40;display:flex;align-items:center;gap:16px;color:var(--faint);font-size:13px;font-weight:600}
+  #dots{display:flex;gap:7px}
+  .dot{width:7px;height:7px;border-radius:50%;background:rgba(150,170,215,.28);border:0;cursor:pointer;padding:0;transition:all .3s}
+  .dot.on{background:var(--teal);width:20px;border-radius:4px;box-shadow:0 0 12px rgba(52,226,196,.6)}
+  #nav{position:fixed;bottom:18px;left:30px;z-index:40;display:flex;gap:8px}
+  #nav button{width:38px;height:38px;border-radius:11px;border:1px solid var(--line2);background:rgba(20,30,60,.6);color:var(--muted);font-size:17px;cursor:pointer;transition:all .2s;backdrop-filter:blur(6px)}
+  #nav button:hover{color:var(--text);border-color:var(--teal);transform:translateY(-1px)}
+  .brandmark{position:fixed;top:22px;left:30px;z-index:40;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px;font-size:15px;color:var(--text);opacity:.9}
+  .brandmark .mk{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--teal-d));display:grid;place-items:center;color:#06231d;font-weight:800;font-size:15px;box-shadow:0 6px 18px -6px rgba(52,226,196,.8)}
+  .brandmark .mk.v{background:linear-gradient(135deg,var(--violet),#6d5cff);color:#120a33}
+
+  /* typographic helpers */
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-bottom:22px;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:28px;height:2px;background:var(--teal);border-radius:2px}
+  h1{font-size:clamp(34px,5.4vw,76px);line-height:1.02;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:clamp(28px,3.8vw,50px);line-height:1.06;font-weight:800;letter-spacing:-.015em;margin-bottom:10px}
+  .lead{font-size:clamp(16px,1.6vw,21px);color:var(--muted);line-height:1.55;max-width:60ch;font-weight:500}
+  .accent{color:var(--teal)}
+  .accent-v{color:var(--violet)}
+  .amber{color:var(--amber)}
+
+  /* title slide */
+  .title-wrap{max-width:1000px}
+  .title-badge{display:inline-flex;align-items:center;gap:9px;padding:8px 16px;border:1px solid var(--line2);border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:30px;background:rgba(20,30,60,.4)}
+  .title-badge b{color:var(--teal)}
+  .title-wrap h1 .g{background:linear-gradient(120deg,var(--teal),var(--violet) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .title-sub{margin-top:26px;font-size:clamp(17px,1.9vw,24px);color:var(--muted);font-weight:500;max-width:62ch;line-height:1.5}
+  .team{margin-top:46px;display:flex;gap:30px;flex-wrap:wrap;align-items:center}
+  .team .who{display:flex;align-items:center;gap:11px}
+  .team .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--line2);display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--teal)}
+  .team .who span{font-weight:600;font-size:15px}
+  .team .who small{display:block;color:var(--faint);font-weight:500;font-size:12px}
+
+  /* grids & cards */
+  .grid{display:grid;gap:18px;margin-top:34px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:linear-gradient(180deg,var(--surface),var(--ink2));border:1px solid var(--line);border-radius:18px;padding:26px 24px;position:relative;overflow:hidden;transition:transform .3s,border-color .3s}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal);opacity:.0;transition:opacity .3s}
+  .card:hover{transform:translateY(-3px);border-color:var(--line2)}
+  .card:hover::before{opacity:.8}
+  .card .ic{font-size:26px;margin-bottom:14px;display:block}
+  .card h3{font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+  .card p{font-size:14.5px;color:var(--muted);line-height:1.5}
+  .card.v::before{background:var(--violet)} .card.a::before{background:var(--amber)} .card.r::before{background:var(--rose)}
+
+  /* stat */
+  .stat{font-size:clamp(40px,5vw,64px);font-weight:800;line-height:1;letter-spacing:-.03em}
+  .stat .u{font-size:.4em;color:var(--muted);font-weight:600;margin-left:4px}
+
+  /* pipeline */
+  .pipe{display:flex;align-items:stretch;gap:0;margin-top:40px;flex-wrap:wrap}
+  .step{flex:1;min-width:0;position:relative;padding:18px 14px;text-align:center}
+  .step .n{width:34px;height:34px;border-radius:10px;margin:0 auto 12px;display:grid;place-items:center;font-weight:800;font-size:15px;background:rgba(52,226,196,.12);color:var(--teal);border:1px solid rgba(52,226,196,.3)}
+  .step.hit .n{background:linear-gradient(135deg,var(--violet),#6d5cff);color:#fff;border-color:transparent;box-shadow:0 8px 22px -8px var(--violet)}
+  .step .t{font-weight:700;font-size:14px;margin-bottom:4px}
+  .step .g{font-size:11.5px;color:var(--faint);line-height:1.35}
+  .step:not(:last-child)::after{content:"→";position:absolute;right:-9px;top:30px;color:var(--faint);font-size:18px;z-index:2}
+
+  /* flow (agnostic) */
+  .flow{display:flex;align-items:center;justify-content:center;gap:0;margin-top:46px;flex-wrap:wrap}
+  .node{padding:20px 22px;border-radius:16px;border:1px solid var(--line2);background:linear-gradient(180deg,var(--surface),var(--ink2));min-width:150px;text-align:center}
+  .node.hub{border-color:var(--teal);background:linear-gradient(180deg,rgba(52,226,196,.14),var(--ink2));box-shadow:0 0 0 1px rgba(52,226,196,.2),var(--shadow)}
+  .node .lbl{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:8px}
+  .node .items{font-size:13.5px;color:var(--muted);line-height:1.7;font-weight:500}
+  .node.hub .big{font-size:18px;font-weight:800;color:var(--teal)}
+  .arrow{color:var(--teal);font-size:26px;padding:0 20px;font-weight:700}
+
+  /* oracle levels */
+  .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
+  .lvl{border-radius:16px;padding:24px;border:1px solid var(--line);background:var(--surface);position:relative}
+  .lvl .tag{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:12px;font-weight:800;font-size:20px;margin-bottom:14px}
+  .lvl.A .tag{background:rgba(52,226,196,.16);color:var(--teal);border:1px solid rgba(52,226,196,.35)}
+  .lvl.B .tag{background:rgba(255,207,107,.14);color:var(--amber);border:1px solid rgba(255,207,107,.32)}
+  .lvl.C .tag{background:rgba(157,140,255,.14);color:var(--violet);border:1px solid rgba(157,140,255,.32)}
+  .lvl h3{font-size:17px;margin-bottom:6px}
+  .lvl p{font-size:13.5px;color:var(--muted);line-height:1.5}
+  .lvl .str{position:absolute;top:24px;right:22px;font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.1em}
+
+  /* list */
+  .checks{margin-top:30px;display:grid;gap:14px;max-width:62ch}
+  .checks li{list-style:none;display:flex;gap:14px;align-items:flex-start;font-size:16.5px;line-height:1.45}
+  .checks .mk{flex:none;width:26px;height:26px;border-radius:8px;background:rgba(52,226,196,.14);color:var(--teal);display:grid;place-items:center;font-size:14px;font-weight:800;margin-top:1px}
+  .checks b{font-weight:700}
+  .checks small{color:var(--muted);font-weight:500}
+
+  .two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr;gap:30px}.g2,.g3,.g4,.levels{grid-template-columns:1fr 1fr}.pipe{gap:10px}.step{min-width:40%}}
+
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+  .chip{padding:7px 14px;border-radius:999px;border:1px solid var(--line2);font-size:13px;font-weight:600;color:var(--muted);background:rgba(20,30,60,.4)}
+  .chip b{color:var(--teal)}
+
+  .note{margin-top:26px;font-size:13.5px;color:var(--faint);border-left:2px solid var(--line2);padding-left:14px;max-width:64ch;line-height:1.5}
+
+  .demo-row{display:flex;align-items:center;gap:16px;padding:15px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surface);margin-bottom:12px}
+  .demo-row .time{font-family:'JetBrains Mono',monospace;color:var(--teal);font-weight:600;font-size:14px;flex:none;width:92px}
+  .demo-row .act{font-weight:600;font-size:15px;flex:1}
+  .demo-row .ev{font-size:12.5px;color:var(--faint);flex:none;max-width:38%;text-align:right}
+
+  .closing h1{max-width:18ch}
+  .big-quote{font-size:clamp(24px,3vw,40px);font-weight:800;line-height:1.2;letter-spacing:-.02em;max-width:20ch}
+  .hint{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);z-index:40;font-size:12px;color:var(--faint);opacity:.8;transition:opacity .4s}
+  .hint.hide{opacity:0}
+  .arch{width:100%;max-height:62vh;margin-top:22px}
+  .arch .bx{fill:#121c3a;stroke:rgba(140,165,215,.30);stroke-width:1.2}
+  .arch .bx.v{stroke:rgba(157,140,255,.55)}
+  .arch .bx.a{stroke:rgba(255,207,107,.5)}
+  .arch .bx.hub{fill:rgba(52,226,196,.07);stroke:#34e2c4;stroke-width:1.5}
+  .arch .in{fill:#0e1630;stroke:rgba(52,226,196,.28)}
+  .arch text{font-family:Manrope,sans-serif;text-anchor:middle}
+  .arch .t{fill:#eaf0fb;font-size:17px;font-weight:700}
+  .arch .tl{fill:#34e2c4}
+  .arch .s{fill:#9db0d4;font-size:12.5px;font-weight:500}
+  .arch .s2{fill:#eaf0fb;font-size:13px;font-weight:600}
+  .arch .cap{fill:#6d7fa6;font-size:13px;font-weight:600;text-anchor:start}
+  .arch .ln{stroke:#6d7fa6;stroke-width:1.6}
+  .arch .ln.t2{stroke:#34e2c4}
+  kbd{font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;font-size:11px}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div class="brandmark"><span class="mk">A</span> AgenTCS</div>
+
+<div id="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide">
+    <div class="title-wrap">
+      <span class="title-badge">Hackathon de IA · <b>TCS AI Friday</b></span>
+      <h1>Copiloto de modernización<br>de <span class="g">código legacy</span></h1>
+      <p class="title-sub">Convierte sistemas antiguos en código moderno <b>demostrando</b> que el comportamiento del negocio se conserva — con trazabilidad y revisión humana.</p>
+      <div class="team">
+        <div class="who"><div class="av">JB</div><span>Juan Bastidas<small>Origen · oráculo · empaquetado</small></span></div>
+        <div class="who"><div class="av">FR</div><span>Felipe Rincón<small>Experiencia · documentación · pitch</small></span></div>
+        <div class="who"><div class="av">DR</div><span>Dairon Rodríguez<small>Verificación · destinos</small></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide">
+    <span class="kicker">El problema</span>
+    <h2>Modernizar no es traducir sintaxis</h2>
+    <p class="lead">La banca sigue corriendo sobre COBOL, PL/SQL, RPG, Delphi y .NET antiguo. La lógica real —cálculos, redondeos, caminos de error— está dispersa entre el código y el conocimiento de pocos especialistas.</p>
+    <div class="grid g3">
+      <div class="card r"><span class="ic">🧮</span><h3>El riesgo está en los decimales</h3><p>Un redondeo cambiado o una regla omitida altera un cálculo financiero sin que nadie lo note.</p></div>
+      <div class="card r"><span class="ic">📦</span><h3>Caja negra</h3><p>Traducir "a ojo" o solo con IA no deja evidencia de que el sistema nuevo se comporta igual que el viejo.</p></div>
+      <div class="card r"><span class="ic">⏳</span><h3>Costo de regresión</h3><p>Sin pruebas diferenciales, validar la equivalencia se vuelve lento, manual y caro.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 · SOLUTION -->
+  <section class="slide">
+    <div class="two-col">
+      <div>
+        <span class="kicker">La solución</span>
+        <h2>AgenTCS</h2>
+        <p class="lead">Un copiloto <span class="accent">agnóstico de lenguaje</span>: ingiere el legacy, extrae las reglas de negocio con sus líneas de origen, exige aprobación humana, genera el código moderno y <b>prueba la equivalencia ejecutando ambos</b>.</p>
+        <div class="chips">
+          <span class="chip"><b>Cualquier</b> origen</span>
+          <span class="chip"><b>Cualquier</b> destino moderno</span>
+          <span class="chip">Un solo comando: <b>Docker</b></span>
+        </div>
+      </div>
+      <div>
+        <ul class="checks">
+          <li><span class="mk">✓</span><div><b>Especificación neutral</b> entre origen y destino — el núcleo no conoce ningún lenguaje concreto.</div></li>
+          <li><span class="mk">✓</span><div><b>Equivalencia demostrable</b>, no prometida: se compara campo por campo, con tolerancia cero.</div></li>
+          <li><span class="mk">✓</span><div><b>Humano en el centro</b>: cada regla se aprueba, ajusta o rechaza antes de generar.</div></li>
+          <li><span class="mk">✓</span><div><b>IA responsable</b>: se sanitizan secretos y solo se usan datos sintéticos.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · PIPELINE -->
+  <section class="slide">
+    <span class="kicker">Cómo funciona</span>
+    <h2>Ocho fases, cada una con su control de calidad</h2>
+    <p class="lead">El flujo se detiene en la fase 4 para la aprobación humana y reintenta la 6↔7 hasta alcanzar la equivalencia.</p>
+    <div class="pipe">
+      <div class="step"><div class="n">1</div><div class="t">Ingesta</div><div class="g">detecta lenguaje · sanitiza</div></div>
+      <div class="step"><div class="n">2</div><div class="t">Análisis</div><div class="g">unidades y dependencias</div></div>
+      <div class="step"><div class="n">3</div><div class="t">Spec</div><div class="g">reglas con líneas de origen</div></div>
+      <div class="step hit"><div class="n">4</div><div class="t">Revisión ⏸</div><div class="g">aprobación humana</div></div>
+      <div class="step"><div class="n">5</div><div class="t">Diseño</div><div class="g">arquitectura del destino</div></div>
+      <div class="step"><div class="n">6</div><div class="t">Código</div><div class="g">compila · 0 críticos ↺</div></div>
+      <div class="step"><div class="n">7</div><div class="t">Verificación</div><div class="g">equivalencia ↺</div></div>
+      <div class="step"><div class="n">8</div><div class="t">Paquete</div><div class="g">código · pruebas · reportes</div></div>
+    </div>
+    <p class="note">Lo determinista —parseo, ejecución, comparación— nunca se delega al modelo. La IA extrae reglas y genera código; la plataforma mide y decide.</p>
+  </section>
+
+  <!-- 5 · AGNOSTIC -->
+  <section class="slide">
+    <span class="kicker">Diferenciador clave</span>
+    <h2>Agnóstico de lenguaje de verdad</h2>
+    <p class="lead">El mismo núcleo admite nuevos lenguajes agregando solo un adaptador. No está atado a un par origen–destino.</p>
+    <div class="flow">
+      <div class="node">
+        <div class="lbl">Origen</div>
+        <div class="items">COBOL · PL/SQL<br>Delphi · RPG<br>.NET / Java legacy</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node hub">
+        <div class="lbl">Núcleo</div>
+        <div class="big">Spec neutral</div>
+        <div class="items" style="margin-top:6px">reglas · tipos · contrato E/S</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node">
+        <div class="lbl">Destino</div>
+        <div class="items">Java 21 · C# .NET 8<br>TypeScript · Python<br>+ framework y arquitectura</div>
+      </div>
+    </div>
+    <p class="note">El usuario elige origen y destino en la interfaz; la matriz de destinos disponibles se muestra según las herramientas presentes en el contenedor.</p>
+  </section>
+
+  <!-- 6 · EQUIVALENCE / ORACLE -->
+  <section class="slide">
+    <span class="kicker">El corazón: equivalencia</span>
+    <h2>Tres niveles de evidencia, siempre declarados</h2>
+    <p class="lead">La pantalla dice de dónde salió el resultado esperado. Nunca se presenta una referencia como si fuera el legacy real.</p>
+    <div class="levels">
+      <div class="lvl A"><span class="str">+ fuerte</span><div class="tag">A</div><h3>Legacy ejecutado</h3><p>El código antiguo corre de verdad en el contenedor (GnuCOBOL, Mono, JDK…) y su salida es la referencia.</p></div>
+      <div class="lvl B"><div class="tag">B</div><h3>Pares E/S provistos</h3><p>El usuario aporta entradas y salidas esperadas. Útil cuando el legacy no se puede ejecutar, como PL/SQL sin Oracle.</p></div>
+      <div class="lvl C"><div class="tag">C</div><h3>Referencia derivada</h3><p>Una implementación independiente generada desde la especificación aprobada. Se declara como la evidencia más débil.</p></div>
+    </div>
+    <p class="note">Comparación con tolerancia cero, decimal exacto con escala y modo de redondeo explícitos. Nunca punto flotante para dinero.</p>
+  </section>
+
+  <!-- 7 · SELF-CORRECTING ENGINE -->
+  <section class="slide">
+    <div class="two-col">
+      <div>
+        <span class="kicker">Motor de autocorrección</span>
+        <h2>Aprende de cada diferencia</h2>
+        <p class="lead">Cuando el código generado no pasa un caso, el motor devuelve al modelo exactamente qué campo falló, el valor esperado y el obtenido, y la regla asociada. Genera una versión nueva y repite.</p>
+        <div class="chips">
+          <span class="chip">Para en <b>equivalencia total</b></span>
+          <span class="chip">o en <b>meseta</b></span>
+          <span class="chip">o al llegar al <b>límite</b></span>
+        </div>
+        <p class="note">Nunca conserva una versión peor: devuelve el mejor intento. Si un caso que ya pasaba vuelve a fallar, lo marca como regresión.</p>
+      </div>
+      <div>
+        <div class="pipe" style="flex-direction:column;margin-top:0;gap:0">
+          <div class="step" style="text-align:left;display:flex;gap:16px;align-items:center;padding:14px 0"><div class="n" style="margin:0">1</div><div><div class="t">Generar</div><div class="g">código del destino desde la spec</div></div></div>
+          <div class="step" style="text-align:left;display:flex;gap:16px;align-items:center;padding:14px 0"><div class="n" style="margin:0">2</div><div><div class="t">Compilar + ejecutar</div><div class="g">en un sandbox aislado</div></div></div>
+          <div class="step" style="text-align:left;display:flex;gap:16px;align-items:center;padding:14px 0"><div class="n" style="margin:0">3</div><div><div class="t">Comparar</div><div class="g">contra el oráculo, campo por campo</div></div></div>
+          <div class="step hit" style="text-align:left;display:flex;gap:16px;align-items:center;padding:14px 0"><div class="n" style="margin:0">4</div><div><div class="t">Retroalimentar ↺</div><div class="g">las diferencias vuelven al modelo</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · SECURITY -->
+  <section class="slide">
+    <span class="kicker">Seguridad e IA responsable</span>
+    <h2>La seguridad ocurre antes de usar IA</h2>
+    <div class="grid g4">
+      <div class="card"><span class="ic">🛡️</span><h3>Sanitización</h3><p>Secretos, correos y tarjetas se enmascaran antes de cualquier llamada al modelo.</p></div>
+      <div class="card v"><span class="ic">🙋</span><h3>Humano en el centro</h3><p>Ninguna regla llega al código sin que una persona la apruebe, con su nombre en la traza.</p></div>
+      <div class="card a"><span class="ic">🔒</span><h3>Sin datos reales</h3><p>Solo datos sintéticos. `.env` nunca se versiona; se rechazan repositorios internos o privados.</p></div>
+      <div class="card"><span class="ic">🔎</span><h3>Escaneo del resultado</h3><p>gitleaks y Semgrep revisan el código generado: secretos, punto flotante en dinero, <code>eval</code>.</p></div>
+    </div>
+    <p class="note">Cada error que ve el usuario trae un código, un mensaje claro y una acción sugerida — nunca una traza ni contenido sensible.</p>
+  </section>
+
+  <!-- 9 · PACKAGE -->
+  <section class="slide">
+    <div class="two-col">
+      <div>
+        <span class="kicker">Qué entrega</span>
+        <h2>Un paquete, no una respuesta del modelo</h2>
+        <p class="lead">Al terminar, una descarga reúne todo lo necesario para revisar y confiar en la migración.</p>
+      </div>
+      <div>
+        <ul class="checks">
+          <li><span class="mk">›</span><div><b>Código moderno</b> con arquitectura limpia del destino.</div></li>
+          <li><span class="mk">›</span><div><b>Reglas de negocio</b> y <b>matriz de trazabilidad</b> regla ↔ líneas legacy.</div></li>
+          <li><span class="mk">›</span><div><b>Casos y reporte de equivalencia</b> con el nivel de oráculo.</div></li>
+          <li><span class="mk">›</span><div><b>Resumen ejecutivo</b> de una página y <b>reporte de seguridad</b>.</div></li>
+          <li><span class="mk">›</span><div><b>Registro de sanitización</b>: qué se enmascaró.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · STACK -->
+  <section class="slide">
+    <span class="kicker">Arquitectura técnica</span>
+    <h2>Portable por diseño</h2>
+    <p class="lead">Todo corre dentro de una sola imagen de contenedor. En la máquina de la demo solo hace falta Docker.</p>
+    <div class="grid g3">
+      <div class="card"><span class="ic">⚙️</span><h3>Núcleo · Python</h3><p>FastAPI, SDK de Anthropic y un motor de autocorrección propio. Lo específico de cada lenguaje vive en adaptadores.</p></div>
+      <div class="card v"><span class="ic">🖥️</span><h3>Interfaz · React</h3><p>Asistente de 8 fases, revisión de reglas, vista comparativa legacy ↔ generado y tablero de evidencia.</p></div>
+      <div class="card a"><span class="ic">🐳</span><h3>Runtimes en la imagen</h3><p>GnuCOBOL, Mono, JDK 21, .NET 8, Node y Python — origen y destino conviven sin instalar nada en el host.</p></div>
+    </div>
+    <p class="note">Modo replay: la inferencia se reproduce desde una caché por hash del prompt, para una demo sin internet y sin gastar créditos.</p>
+  </section>
+
+  <!-- 10b · ARCHITECTURE DIAGRAM -->
+  <section class="slide">
+    <span class="kicker">Arquitectura</span>
+    <h2>Cómo se conectan las piezas</h2>
+    <svg class="arch" viewBox="0 0 1120 470" role="img" aria-label="Diagrama de arquitectura de AgenTCS">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6d7fa6"/></marker>
+        <marker id="aht" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34e2c4"/></marker>
+      </defs>
+      <!-- container boundary -->
+      <rect x="230" y="10" width="880" height="450" rx="22" fill="none" stroke="rgba(140,165,215,.28)" stroke-dasharray="6 6"/>
+      <text x="252" y="38" class="cap">🐳 Una sola imagen Docker · http://localhost:8000</text>
+
+      <!-- user -->
+      <rect x="10" y="190" width="180" height="90" rx="16" class="bx"/>
+      <text x="100" y="228" class="t">Persona</text>
+      <text x="100" y="252" class="s">sube código · aprueba reglas</text>
+      <line x1="190" y1="235" x2="262" y2="235" class="ln" marker-end="url(#ah)"/>
+
+      <!-- UI -->
+      <rect x="265" y="190" width="170" height="90" rx="16" class="bx v"/>
+      <text x="350" y="228" class="t">Interfaz</text>
+      <text x="350" y="252" class="s">React · 8 fases · HITL</text>
+      <line x1="435" y1="235" x2="487" y2="235" class="ln" marker-end="url(#ah)"/>
+
+      <!-- API -->
+      <rect x="490" y="190" width="150" height="90" rx="16" class="bx"/>
+      <text x="565" y="228" class="t">API</text>
+      <text x="565" y="252" class="s">FastAPI · ingesta</text>
+      <line x1="640" y1="235" x2="692" y2="235" class="ln" marker-end="url(#ah)"/>
+
+      <!-- Engine -->
+      <rect x="695" y="62" width="395" height="200" rx="18" class="bx hub"/>
+      <text x="892" y="92" class="t tl">Motor de autocorrección</text>
+      <rect x="715" y="110" width="170" height="54" rx="11" class="in"/><text x="800" y="142" class="s2">Extractor de reglas</text>
+      <rect x="900" y="110" width="170" height="54" rx="11" class="in"/><text x="985" y="142" class="s2">Generador de casos</text>
+      <rect x="715" y="178" width="170" height="54" rx="11" class="in"/><text x="800" y="210" class="s2">Oráculo A · B · C</text>
+      <rect x="900" y="178" width="170" height="54" rx="11" class="in"/><text x="985" y="210" class="s2">Generar ↺ comparar</text>
+
+      <!-- sanitizer + LLM -->
+      <rect x="490" y="62" width="150" height="90" rx="16" class="bx a"/>
+      <text x="565" y="100" class="t">Sanitizador</text>
+      <text x="565" y="124" class="s">antes de cada llamada</text>
+      <line x1="695" y1="108" x2="642" y2="108" class="ln" marker-end="url(#ah)"/>
+      <rect x="265" y="62" width="170" height="90" rx="16" class="bx a"/>
+      <text x="350" y="100" class="t">Claude</text>
+      <text x="350" y="124" class="s">caché + modo replay</text>
+      <line x1="490" y1="108" x2="437" y2="108" class="ln" marker-end="url(#ah)"/>
+
+      <!-- adapters -->
+      <rect x="695" y="300" width="190" height="120" rx="16" class="bx"/>
+      <text x="790" y="332" class="t">Packs de origen</text>
+      <text x="790" y="358" class="s">COBOL · PL/SQL · Delphi</text>
+      <text x="790" y="380" class="s">PHP · .NET / Java legacy</text>
+      <text x="790" y="402" class="s">runner = legacy real</text>
+      <rect x="900" y="300" width="190" height="120" rx="16" class="bx"/>
+      <text x="995" y="332" class="t">Packs de destino</text>
+      <text x="995" y="358" class="s">Java · C# · TypeScript</text>
+      <text x="995" y="380" class="s">Python + framework</text>
+      <text x="995" y="402" class="s">compilar + arnés</text>
+      <line x1="790" y1="262" x2="790" y2="298" class="ln t2" marker-end="url(#aht)"/>
+      <line x1="995" y1="262" x2="995" y2="298" class="ln t2" marker-end="url(#aht)"/>
+
+      <!-- sandbox + package -->
+      <rect x="490" y="320" width="150" height="90" rx="16" class="bx"/>
+      <text x="565" y="358" class="t">Sandbox</text>
+      <text x="565" y="382" class="s">sin red · sin secretos</text>
+      <line x1="695" y1="365" x2="642" y2="365" class="ln" marker-end="url(#ah)"/>
+      <line x1="490" y1="365" x2="437" y2="365" class="ln" marker-end="url(#ah)"/>
+      <rect x="265" y="320" width="170" height="90" rx="16" class="bx v"/>
+      <text x="350" y="358" class="t">Paquete</text>
+      <text x="350" y="382" class="s">código · reportes</text>
+    </svg>
+    <p class="note">La API y el motor nunca mencionan un lenguaje concreto: todo lo específico vive en un pack. Agregar un lenguaje de origen ejecutable es un YAML y un Markdown.</p>
+  </section>
+
+  <!-- 11 · DEMO -->
+  <section class="slide">
+    <span class="kicker">La demo · 10 minutos</span>
+    <h2>Lo que verán en pantalla</h2>
+    <div style="margin-top:28px">
+      <div class="demo-row"><span class="time">0:35</span><span class="act">Entrada inválida: se rechaza un repositorio interno antes de clonarlo</span><span class="ev">error seguro con acción sugerida</span></div>
+      <div class="demo-row"><span class="time">2:45</span><span class="act">Revisión de reglas: condición, acción, confianza y líneas legacy</span><span class="ev">aprobación humana con autor</span></div>
+      <div class="demo-row"><span class="time">4:00</span><span class="act">Generación y autocorrección intento a intento</span><span class="ev">aprobados/total · similitud · diferencias</span></div>
+      <div class="demo-row"><span class="time">6:10</span><span class="act">Caso representativo y caso borde (tope de 360 días)</span><span class="ev">misma salida en ambos lados</span></div>
+      <div class="demo-row"><span class="time">8:45</span><span class="act">Descarga del paquete y resumen ejecutivo</span><span class="ev">código + pruebas + evidencia</span></div>
+    </div>
+    <p class="note">Contingencia en cuatro niveles: en vivo → replay → demo precomputado → video. Nunca cambia resultados; solo el medio.</p>
+  </section>
+
+  <!-- 12 · STATUS (honest) -->
+  <section class="slide">
+    <span class="kicker">Estado</span>
+    <h2>Dónde estamos</h2>
+    <div class="grid g3">
+      <div class="card"><span class="ic">✅</span><h3>Funciona de punta a punta</h3><p>Ingesta universal, 8 fases, autocorrección, paquete descargable y una corrida real completa validada.</p></div>
+      <div class="card a"><span class="ic">🔬</span><h3>Corrida de referencia</h3><p>COBOL → Python: <b>34/34 casos</b>, similitud <b>1.00</b> en 2 intentos. Oráculo nivel C; las corridas nivel A en Docker quedan como siguiente paso.</p></div>
+      <div class="card v"><span class="ic">🎯</span><h3>Verificación como eje</h3><p>El criterio de mayor peso es la equivalencia demostrada. Todo el diseño gira alrededor de poder probarla.</p></div>
+    </div>
+    <p class="note">Regla de honestidad del equipo: en la demo se dicen únicamente las métricas visibles en pantalla; los valores pendientes no se completan de memoria.</p>
+  </section>
+
+  <!-- 13 · CLOSING -->
+  <section class="slide closing">
+    <span class="kicker">En una frase</span>
+    <div class="big-quote">Modernizar <span class="accent">conservando el comportamiento</span> del negocio — y poder <span class="accent-v">demostrarlo</span>.</div>
+    <div class="chips" style="margin-top:38px">
+      <span class="chip">Agnóstico de lenguaje</span>
+      <span class="chip">Equivalencia demostrable</span>
+      <span class="chip">Humano en el centro</span>
+      <span class="chip">IA responsable</span>
+      <span class="chip">Un comando</span>
+    </div>
+    <p class="title-sub" style="margin-top:36px;font-size:16px">AgenTCS · Juan Bastidas · Felipe Rincón · Dairon Rodríguez — Hackathon TCS AI Friday</p>
+  </section>
+
+</div>
+
+<div id="nav"><button id="prev" aria-label="Anterior">‹</button><button id="next" aria-label="Siguiente">›</button></div>
+<div id="chrome"><div id="dots"></div><span id="count"></span></div>
+<div class="hint" id="hint">Usa <kbd>←</kbd> <kbd>→</kbd> o la barra espaciadora</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var i=0, n=slides.length;
+  var bar=document.getElementById('bar'), count=document.getElementById('count');
+  var dotsWrap=document.getElementById('dots'), hint=document.getElementById('hint');
+  slides.forEach(function(s,idx){
+    var d=document.createElement('button'); d.className='dot'; d.setAttribute('aria-label','Diapositiva '+(idx+1));
+    d.addEventListener('click',function(){go(idx)}); dotsWrap.appendChild(d);
+  });
+  var dots=[].slice.call(dotsWrap.children);
+  function render(){
+    slides.forEach(function(s,idx){
+      s.classList.remove('active','prev');
+      if(idx===i) s.classList.add('active');
+      else if(idx<i) s.classList.add('prev');
+    });
+    dots.forEach(function(d,idx){d.classList.toggle('on',idx===i)});
+    bar.style.width=((i)/(n-1)*100)+'%';
+    count.textContent=(i+1)+' / '+n;
+  }
+  function go(x){ i=Math.max(0,Math.min(n-1,x)); render(); if(i>0){hint.classList.add('hide')} }
+  function next(){go(i+1)} function prev(){go(i-1)}
+  document.getElementById('next').addEventListener('click',next);
+  document.getElementById('prev').addEventListener('click',prev);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key==='Home'){go(0)} else if(e.key==='End'){go(n-1)}
+  });
+  var sx=null;
+  document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(sx===null)return; var dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>50){dx<0?next():prev()} sx=null;
+  },{passive:true});
+  render();
+  setTimeout(function(){hint.classList.add('hide')},6000);
+})();
+</script>
+</body>
+</html>

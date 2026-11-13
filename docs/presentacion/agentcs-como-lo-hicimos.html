@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgenTCS · Cómo lo hicimos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1e; --ink2:#0e1630; --surface:#121c3a; --surface2:#172447;
+    --line:rgba(140,165,215,.16); --line2:rgba(140,165,215,.28);
+    --text:#eaf0fb; --muted:#9db0d4; --faint:#6d7fa6;
+    --teal:#34e2c4; --violet:#9d8cff; --amber:#ffcf6b; --rose:#ff7a9c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:90px}
+  body{font-family:'Manrope',system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.55;
+    background:radial-gradient(1200px 700px at 85% -5%,rgba(52,226,196,.09),transparent 60%),
+               radial-gradient(1000px 800px at -10% 40%,rgba(157,140,255,.09),transparent 55%),
+               linear-gradient(180deg,var(--ink2),var(--ink) 40%);background-attachment:fixed;min-height:100vh}
+  code{font-family:'JetBrains Mono',monospace;font-size:.88em;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:#cfe9ff}
+
+  header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);background:rgba(10,15,30,.72);border-bottom:1px solid var(--line)}
+  .topin{max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:22px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;flex:none}
+  .brand .mk{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--teal),#17b89d);display:grid;place-items:center;color:#06231d;font-weight:800}
+  nav.toc{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+  nav.toc a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:6px 11px;border-radius:9px;transition:all .2s}
+  nav.toc a:hover,nav.toc a.on{color:var(--text);background:rgba(52,226,196,.12)}
+
+  main{max-width:1180px;margin:0 auto;padding:0 28px 90px}
+  .hero{padding:70px 0 40px}
+  .kicker{font-size:12.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .kicker::before{content:"";width:26px;height:2px;background:var(--teal);border-radius:2px}
+  h1{font-size:clamp(34px,5vw,62px);line-height:1.04;font-weight:800;letter-spacing:-.02em;max-width:18ch}
+  h1 .g{background:linear-gradient(120deg,var(--teal),var(--violet) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{font-size:clamp(16px,1.5vw,19px);color:var(--muted);max-width:66ch;margin-top:20px;font-weight:500}
+  .pill{display:inline-flex;gap:8px;align-items:center;margin-top:26px;padding:10px 16px;border-radius:12px;border:1px solid rgba(52,226,196,.3);background:rgba(52,226,196,.07);font-size:14px;font-weight:600;color:var(--text);max-width:80ch}
+
+  section.blk{padding:56px 0 10px;border-top:1px solid var(--line)}
+  h2{font-size:clamp(26px,3vw,38px);font-weight:800;letter-spacing:-.015em;line-height:1.1;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:70ch;font-weight:500}
+
+  .grid{display:grid;gap:16px;margin-top:28px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:900px){.g2,.g3{grid-template-columns:1fr}nav.toc{display:none}}
+  .card{background:linear-gradient(180deg,var(--surface),var(--ink2));border:1px solid var(--line);border-radius:16px;padding:22px;position:relative}
+  .card h3{font-size:17px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .card p,.card li{font-size:14.5px;color:var(--muted)}
+  .card ul{padding-left:18px;margin-top:6px} .card li{margin:3px 0}
+  .card .say{margin-top:12px;font-size:13.5px;color:var(--text);border-left:2px solid var(--teal);padding-left:11px;font-style:italic}
+  .num{flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:13px;font-weight:800;background:rgba(52,226,196,.13);color:var(--teal);border:1px solid rgba(52,226,196,.3)}
+
+  /* agents flow */
+  .agents{margin-top:30px;display:grid;gap:12px}
+  .agent{display:grid;grid-template-columns:54px 190px 1fr 150px;gap:18px;align-items:center;padding:16px 20px;border:1px solid var(--line);border-radius:14px;background:var(--surface);position:relative}
+  .agent .step{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:rgba(157,140,255,.15);color:var(--violet);border:1px solid rgba(157,140,255,.35)}
+  .agent .nm{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--teal);font-size:15px}
+  .agent .nm small{display:block;font-family:'Manrope';color:var(--faint);font-size:12px;font-weight:600;margin-top:2px}
+  .agent .what{font-size:14.5px;color:var(--text)}
+  .agent .what span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+  .agent .ph{font-size:12px;font-weight:700;color:var(--faint);text-align:right;letter-spacing:.04em}
+  .agent.opt{opacity:.92;border-style:dashed}
+  @media(max-width:900px){.agent{grid-template-columns:44px 1fr}.agent .what,.agent .ph{grid-column:1/-1;text-align:left}}
+
+  .callout{margin-top:24px;padding:18px 20px;border-radius:14px;background:rgba(255,207,107,.07);border:1px solid rgba(255,207,107,.3);font-size:14.5px}
+  .callout b{color:var(--amber)}
+
+  /* loop diagram */
+  .loopwrap{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center;margin-top:28px}
+  @media(max-width:900px){.loopwrap{grid-template-columns:1fr}}
+  svg.loop{width:100%;max-width:520px;justify-self:center}
+  svg text{font-family:Manrope,sans-serif;text-anchor:middle}
+
+  table.params{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+  table.params td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.params td:first-child{color:var(--muted);width:46%}
+  table.params td:last-child{font-weight:700}
+
+  /* QA */
+  details{border:1px solid var(--line);border-radius:14px;background:var(--surface);margin-top:12px;overflow:hidden}
+  summary{cursor:pointer;padding:16px 20px;font-weight:700;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--teal);font-size:20px;line-height:1;transition:transform .2s}
+  details[open] summary::after{transform:rotate(45deg)}
+  details .ans{padding:0 20px 18px;color:var(--muted);font-size:14.5px}
+  details .ans b{color:var(--text)}
+  .qa-tools{display:flex;gap:10px;margin-top:20px}
+  .btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--muted);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+  .btn:hover{color:var(--text);border-color:var(--teal)}
+
+  footer{max-width:1180px;margin:0 auto;padding:26px 28px 40px;color:var(--faint);font-size:13px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header class="top"><div class="topin">
+  <div class="brand"><span class="mk">A</span> AgenTCS · Cómo lo hicimos</div>
+  <nav class="toc">
+    <a href="#metodologia">Metodología</a><a href="#agentes">Agentes</a><a href="#motor">Motor</a>
+    <a href="#tecnicas">Técnicas</a><a href="#patrones">Patrones</a><a href="#preguntas">Preguntas del jurado</a>
+  </nav>
+</div></header>
+
+<main>
+  <div class="hero">
+    <span class="kicker">Guía para el equipo</span>
+    <h1>Metodología, agentes y <span class="g">patrones</span> de AgenTCS</h1>
+    <p class="lead">Todo lo que hay aquí está tomado del código real del repositorio. Úsenlo para ensayar: si el jurado pregunta, cada afirmación se puede mostrar en el código o en pantalla.</p>
+    <div class="pill">💡 La idea en una frase: la IA <b>propone</b> (reglas y código); la plataforma <b>ejecuta, mide y decide</b> (compilación, comparación y controles).</div>
+  </div>
+
+  <!-- METODOLOGÍA -->
+  <section class="blk" id="metodologia">
+    <span class="kicker">01</span>
+    <h2>Metodología de trabajo</h2>
+    <p class="sub">Cómo construimos la solución como equipo de tres, y cómo la solución trabaja una migración.</p>
+    <div class="grid g3">
+      <div class="card"><h3><span class="num">1</span>Primero los contratos</h3><p>Lo primero que escribimos fue <code>copilot/contracts/</code>: especificación neutral, tipos, casos y reporte de equivalencia. Luego se congeló.</p><p class="say">"Con el contrato fijo, tres máquinas trabajaron en paralelo sin pisarse."</p></div>
+      <div class="card"><h3><span class="num">2</span>Guiada por especificación</h3><p>No traducimos línea a línea. Extraemos una especificación de negocio —reglas, tipos, contrato de entrada y salida— y generamos el código nuevo desde ella.</p><p class="say">"El puente entre el lenguaje viejo y el nuevo es la especificación, no la sintaxis."</p></div>
+      <div class="card"><h3><span class="num">3</span>Humano en el ciclo</h3><p>El flujo se detiene en la fase 4. Nada se genera hasta que una persona aprueba, ajusta o rechaza cada regla. Las de baja confianza (&lt; 0,7) exigen comentario.</p><p class="say">"La IA no decide sola qué es una regla de negocio."</p></div>
+      <div class="card"><h3><span class="num">4</span>Verificación diferencial</h3><p>Legacy y código nuevo se ejecutan con las mismas entradas y se comparan campo por campo, con tolerancia cero.</p><p class="say">"La equivalencia se demuestra, no se promete."</p></div>
+      <div class="card"><h3><span class="num">5</span>Decisiones documentadas</h3><p>Cada decisión de arquitectura quedó en un ADR: 7 en <code>docs/adr/</code> (caso, portabilidad, agnosticismo, interfaz, motor, ingesta, oráculo nivel A).</p></div>
+      <div class="card"><h3><span class="num">6</span>Pruebas sin gastar créditos</h3><p>Más de 120 pruebas automáticas usan un modelo simulado. El modelo real solo se usa en corridas de verdad, y sus respuestas quedan en caché.</p></div>
+    </div>
+  </section>
+
+  <!-- AGENTES -->
+  <section class="blk" id="agentes">
+    <span class="kicker">02</span>
+    <h2>Los 7 agentes</h2>
+    <p class="sub">Todos usan el mismo modelo (Claude). Cada uno tiene su propio prompt de sistema y responde en JSON que se valida con un esquema antes de usarse. Un motor propio, determinista, los llama en orden.</p>
+    <div class="agents">
+      <div class="agent opt"><div class="step">0</div><div class="nm">advisor<small>opcional · antes de iniciar</small></div><div class="what">Sugiere destino, framework y arquitectura<span>Lee una muestra del código subido y propone una configuración válida del catálogo.</span></div><div class="ph">INGESTA</div></div>
+      <div class="agent"><div class="step">1</div><div class="nm">extractor<small>fase 3</small></div><div class="what">Extrae las reglas de negocio<span>Cada regla cita archivo y líneas de origen, y trae un nivel de confianza. Las que citan líneas inexistentes se descartan.</span></div><div class="ph">ESPECIFICACIÓN</div></div>
+      <div class="agent"><div class="step">2</div><div class="nm">tests<small>fase 7</small></div><div class="what">Genera los casos de prueba<span>Típicos, de borde e inválidos. La plataforma agrega bordes deterministas (±1 unidad, extremos).</span></div><div class="ph">VERIFICACIÓN</div></div>
+      <div class="agent"><div class="step">3</div><div class="nm">legacy_harness<small>oráculo nivel A</small></div><div class="what">Escribe el arnés para ejecutar el legacy real<span>Un programa mínimo en el mismo lenguaje que alimenta el legacy y lee su salida. La plataforma lo valida, compila y ejecuta.</span></div><div class="ph">ORÁCULO</div></div>
+      <div class="agent"><div class="step">4</div><div class="nm">oracle<small>oráculo nivel C</small></div><div class="what">Escribe una implementación de referencia<span>Solo si el legacy no se puede ejecutar ni hay pares del usuario. Independiente del código migrado.</span></div><div class="ph">ORÁCULO</div></div>
+      <div class="agent"><div class="step">5</div><div class="nm">generator<small>fase 6 · se repite</small></div><div class="what">Genera el código en el destino<span>Y lo corrige en cada intento con las diferencias exactas que encontró la comparación.</span></div><div class="ph">CÓDIGO</div></div>
+      <div class="agent"><div class="step">6</div><div class="nm">lessons<small>al terminar</small></div><div class="what">Resume lo aprendido de los errores<span>Guarda lecciones cortas que se inyectan en corridas futuras.</span></div><div class="ph">MEMORIA</div></div>
+    </div>
+    <div class="callout"><b>Si preguntan "¿es un sistema multiagente?"</b> — Lo honesto: son <b>agentes especializados orquestados por un motor determinista</b>. No conversan entre sí ni deciden el flujo; cada uno hace una tarea acotada y la plataforma valida todo lo que producen.</div>
+  </section>
+
+  <!-- MOTOR -->
+  <section class="blk" id="motor">
+    <span class="kicker">03</span>
+    <h2>El motor de autocorrección</h2>
+    <p class="sub">El corazón técnico (ADR-005). Repite generar → compilar → comparar → retroalimentar hasta lograr la equivalencia o una condición de parada.</p>
+    <div class="loopwrap">
+      <svg class="loop" viewBox="0 0 520 420" role="img" aria-label="Ciclo de autocorrección">
+        <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#34e2c4"/></marker></defs>
+        <path d="M325.7,86.4 A140,140 0 0 1 388,153" fill="none" stroke="#34e2c4" stroke-width="2.4" marker-end="url(#a)"/>
+        <path d="M388,267 A140,140 0 0 1 353.7,314" fill="none" stroke="#34e2c4" stroke-width="2.4" marker-end="url(#a)"/>
+        <path d="M194.3,333.6 A140,140 0 0 1 132,267" fill="none" stroke="#34e2c4" stroke-width="2.4" marker-end="url(#a)"/>
+        <path d="M132,153 A140,140 0 0 1 194.3,86.4" fill="none" stroke="#34e2c4" stroke-width="2.4" marker-end="url(#a)"/>
+        <rect x="195" y="41" width="130" height="58" rx="14" fill="#121c3a" stroke="#9d8cff"/><text x="260" y="67" fill="#eaf0fb" font-size="16" font-weight="700">Generar</text><text x="260" y="86" fill="#9db0d4" font-size="11.5">agente generator</text>
+        <rect x="330" y="181" width="160" height="58" rx="14" fill="#121c3a" stroke="rgba(140,165,215,.4)"/><text x="410" y="207" fill="#eaf0fb" font-size="16" font-weight="700">Compilar</text><text x="410" y="226" fill="#9db0d4" font-size="11.5">pack destino · sandbox</text>
+        <rect x="170" y="321" width="180" height="58" rx="14" fill="#121c3a" stroke="rgba(140,165,215,.4)"/><text x="260" y="347" fill="#eaf0fb" font-size="16" font-weight="700">Comparar</text><text x="260" y="366" fill="#9db0d4" font-size="11.5">vs oráculo · campo a campo</text>
+        <rect x="30" y="181" width="160" height="58" rx="14" fill="#121c3a" stroke="#ffcf6b"/><text x="110" y="207" fill="#eaf0fb" font-size="16" font-weight="700">Retroalimentar</text><text x="110" y="226" fill="#9db0d4" font-size="11.5">caso · campo · regla</text>
+        <text x="260" y="205" fill="#34e2c4" font-size="15" font-weight="800">¿100 %?</text><text x="260" y="226" fill="#9db0d4" font-size="12">sí → paquete</text>
+      </svg>
+      <div class="card">
+        <h3>Parámetros reales (<code>loop.py</code>)</h3>
+        <table class="params">
+          <tr><td>Máximo de intentos</td><td>5</td></tr>
+          <tr><td>Meseta: intentos sin mejora antes de parar</td><td>2</td></tr>
+          <tr><td>Presupuesto de tokens por corrida</td><td>600.000</td></tr>
+          <tr><td>Similitud</td><td>0,7 × casos que pasan + 0,3 × campos iguales</td></tr>
+          <tr><td>Qué se entrega</td><td>El mejor intento, no el último</td></tr>
+          <tr><td>Regresión</td><td>Caso que pasaba y vuelve a fallar → se marca</td></tr>
+          <tr><td>Reintentos si el JSON no cumple el esquema</td><td>2</td></tr>
+        </table>
+        <p class="say" style="margin-top:14px">"A cada intento le decimos exactamente qué caso falló, en qué campo, qué esperábamos, qué obtuvimos y qué regla está implicada."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TÉCNICAS -->
+  <section class="blk" id="tecnicas">
+    <span class="kicker">04</span>
+    <h2>Técnicas</h2>
+    <div class="grid g2">
+      <div class="card"><h3>🎯 Oráculo de tres niveles</h3><ul><li><b>A</b>: el legacy se ejecuta de verdad (GnuCOBOL, Mono, JDK…).</li><li><b>B</b>: pares entrada/salida que aporta el usuario.</li><li><b>C</b>: referencia generada desde la especificación aprobada.</li></ul><p class="say">"El nivel se declara siempre; C nunca se presenta como si fuera A."</p></div>
+      <div class="card"><h3>🧮 Decimales exactos</h3><p>Todo dinero y tasa pasa por un tipo neutral con escala y modo de redondeo explícitos (HALF_UP, HALF_EVEN, DOWN…). Los casos rechazan números con punto flotante: los decimales viajan como texto.</p></div>
+      <div class="card"><h3>🧠 Memoria de lecciones, no ajuste fino</h3><p>El modelo no se reentrena. Las lecciones de corridas anteriores se guardan y se inyectan en el prompt del generador.</p></div>
+      <div class="card"><h3>✅ Salida estructurada validada</h3><p>Cada respuesta del modelo se valida con Pydantic. Las reglas que citan líneas que no existen se descartan; las variables que no aparecen en el código bajan la confianza.</p></div>
+      <div class="card"><h3>💾 Caché y modo replay</h3><p>Cada respuesta se guarda por hash SHA-256 del modelo y el prompt. Con <code>AGENTCS_LLM_REPLAY=1</code> la demo corre sin internet y sin gastar créditos.</p></div>
+      <div class="card"><h3>🛡️ Sanitización previa</h3><p>Antes de cada llamada al modelo se enmascaran secretos, correos y números de tarjeta (validados con el algoritmo de Luhn).</p></div>
+      <div class="card"><h3>📦 Ejecución en sandbox</h3><p>El código generado corre sin la API key en su entorno, con tiempo límite y rutas protegidas.</p></div>
+      <div class="card"><h3>🔎 Escaneo del resultado</h3><p>gitleaks y Semgrep con reglas propias revisan el código generado: secretos, punto flotante en dinero y <code>eval</code>. Sin herramienta, se declara "escaneo incompleto".</p></div>
+    </div>
+  </section>
+
+  <!-- PATRONES -->
+  <section class="blk" id="patrones">
+    <span class="kicker">05</span>
+    <h2>Patrones de diseño</h2>
+    <div class="grid g3">
+      <div class="card"><h3>Puertos y adaptadores</h3><p>Arquitectura hexagonal en la propia solución: el núcleo no conoce ningún lenguaje; cada origen y destino es un "pack" que implementa una interfaz.</p><p class="say">"Es el patrón que hace posible el agnosticismo."</p></div>
+      <div class="card"><h3>Registro de plugins + Strategy</h3><p>El pack se elige en tiempo de ejecución según el lenguaje. Agregar un lenguaje de origen ejecutable es un YAML y un Markdown.</p></div>
+      <div class="card"><h3>Pipeline con controles de calidad</h3><p>8 fases; cada una tiene una condición de salida (gate) que se muestra en pantalla.</p></div>
+      <div class="card"><h3>Golden master / pruebas diferenciales</h3><p>La salida del legacy es la verdad; el código nuevo tiene que reproducirla exactamente.</p></div>
+      <div class="card"><h3>Arquitectura limpia en lo generado</h3><p>Dominio sin frameworks; el código del framework (Spring, ASP.NET, NestJS…) queda aislado en <code>infrastructure/</code>.</p></div>
+      <div class="card"><h3>Seguridad por defecto</h3><p>Anti-SSRF al clonar repositorios, protección contra <i>zip slip</i>, límites de tamaño y errores con acción sugerida que nunca exponen trazas.</p></div>
+    </div>
+  </section>
+
+  <!-- PREGUNTAS -->
+  <section class="blk" id="preguntas">
+    <span class="kicker">06</span>
+    <h2>Preguntas probables del jurado</h2>
+    <p class="sub">Intenten responder en voz alta antes de abrir cada una.</p>
+    <div class="qa-tools"><button class="btn" id="openAll">Abrir todas</button><button class="btn" id="closeAll">Cerrar todas</button></div>
+
+    <details><summary>¿Cómo saben que el código nuevo hace lo mismo que el viejo?</summary><div class="ans">Ejecutamos ambos con las mismas entradas y comparamos cada campo con tolerancia cero. La pantalla dice qué nivel de evidencia tiene el resultado: <b>A</b> si el legacy se ejecutó de verdad, <b>B</b> si usamos pares del usuario, <b>C</b> si es una referencia generada.</div></details>
+    <details><summary>¿Y si la IA extrae mal una regla?</summary><div class="ans">Dos barreras. Primero, una persona revisa cada regla con sus líneas de origen antes de generar nada. Segundo, con oráculo nivel A el esperado sale del legacy real, así que un error de extracción aparece como diferencia. Con nivel C ese error podría repetirse en ambos lados; por eso lo declaramos como la evidencia más débil.</div></details>
+    <details><summary>¿Funciona solo con COBOL?</summary><div class="ans">No. El núcleo no conoce ningún lenguaje. Hoy hay packs de origen para COBOL, PL/SQL, Delphi, PHP, RPG, VB6, .NET y Java legacy, y destinos Java, C#, TypeScript y Python. Un lenguaje desconocido usa un segmentador genérico con confianza reducida, y eso se declara.</div></details>
+    <details><summary>¿Es un sistema multiagente?</summary><div class="ans">Son siete agentes especializados orquestados por un motor determinista. No conversan entre sí: cada uno hace una tarea acotada y la plataforma valida lo que producen antes de usarlo.</div></details>
+    <details><summary>¿El modelo aprende o se reentrena?</summary><div class="ans">No se reentrena. Usamos memoria de lecciones: al final de una corrida se resumen los errores y esas lecciones se inyectan en el prompt de corridas futuras.</div></details>
+    <details><summary>¿Qué pasa con los datos sensibles del cliente?</summary><div class="ans">Antes de cualquier llamada al modelo se sanitizan secretos, correos y tarjetas. En la demo solo usamos datos sintéticos. El <code>.env</code> nunca se versiona y el código generado se escanea con gitleaks y Semgrep.</div></details>
+    <details><summary>¿Cómo manejan los redondeos?</summary><div class="ans">Todo valor monetario pasa por un tipo neutral con escala y modo de redondeo explícitos. Nunca punto flotante. Los casos de prueba incluyen bordes de redondeo a propósito, y el motor corrige si el destino redondea distinto.</div></details>
+    <details><summary>¿Qué pasa si no logra el 100 %?</summary><div class="ans">Se detiene por meseta, por máximo de intentos o por presupuesto, entrega el mejor intento y la fase de verificación queda en rojo con las diferencias visibles. Nunca se oculta un fallo.</div></details>
+    <details><summary>¿Qué pasa si se cae internet en la demo?</summary><div class="ans">Modo replay: las respuestas del modelo están en caché por hash del prompt, así que la corrida se reproduce sin internet. El análisis, la compilación y la comparación siguen ejecutándose de verdad.</div></details>
+    <details><summary>¿Qué tan difícil es instalarlo?</summary><div class="ans">Un comando: <code>docker compose up --build</code> y abrir <code>http://localhost:8000</code>. Todos los compiladores y runtimes viven dentro de la imagen.</div></details>
+  </section>
+</main>
+
+<footer>AgenTCS · Juan Bastidas · Felipe Rincón · Dairon Rodríguez — Hackathon TCS AI Friday · Documento interno de preparación</footer>
+
+<script>
+  document.getElementById('openAll').onclick=function(){document.querySelectorAll('details').forEach(function(d){d.open=true})};
+  document.getElementById('closeAll').onclick=function(){document.querySelectorAll('details').forEach(function(d){d.open=false})};
+  var links=[].slice.call(document.querySelectorAll('nav.toc a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  function spy(){var y=window.scrollY+120,cur=-1;secs.forEach(function(s,i){if(s&&s.offsetTop<=y)cur=i});links.forEach(function(a,i){a.classList.toggle('on',i===cur)})}
+  window.addEventListener('scroll',spy,{passive:true});spy();
+</script>
+</body>
+</html>
