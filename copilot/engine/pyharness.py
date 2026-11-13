@@ -70,7 +70,8 @@ def run_python_module(workdir: Path, module: str, cases: list, timeout: float | 
     actual = workdir / "actual.json"
     actual.unlink(missing_ok=True)
     kwargs = {"timeout": timeout} if timeout else {}
-    result = run_cmd([sys.executable, HARNESS_FILE, "cases.json", "actual.json"], workdir, **kwargs)
+    result = run_cmd([sys.executable, HARNESS_FILE, "cases.json", "actual.json"], workdir,
+                     isolated=True, **kwargs)
     if not result.ok or not actual.is_file():
         raise HarnessError(result)
     return [CaseOutput.model_validate(o) for o in json.loads(actual.read_text(encoding="utf-8"))]

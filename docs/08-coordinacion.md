@@ -9,7 +9,7 @@ sección de pedidos, nunca como cambios directos a archivos ajenos.
 |---|---|---|---|---|---|
 | A | Origen, oráculo, Dockerfile | — | — | — | — |
 | B | Verificación de punta a punta y destinos | `maquina-b/e2e-real` | (1) `.gitattributes` LF. (2) `samples/` con 3 programas sintéticos (COBOL INTMORA y PAGOMIN, PL/SQL comisión) y casos de referencia. (5a) Pack C# revisado: enteros llegaban como `decimal` al código generado (corregido), fechas/enums en el arnés, se excluyen `Tests/` y `Program.cs`, sin servidores de compilación. (6) Anti-SSRF en `sources.py` (localhost, IPs privadas, 169.254.x.x, CGNAT, IP fijada con `curloptResolve`, sin redirecciones). `.sql` con PL/SQL se detecta como `plsql`. `.gitignore` permite `output/llm_cache/`. Pruebas: 100 pasan, 2 omitidas (C# y HTTP sin .NET/FastAPI local). | (3) Corrida real Java → TypeScript con `samples/`. (4) Commit de la caché. (5b) C# dentro de Docker. | Nada por el Dockerfile (C-0 resuelto por C). Riesgo abierto C-2 si la corrida pasa por el proxy de TCS. |
-| C | Interfaz y documentación | `maquina-c/ux-docs` | Finalizado: UI de verificación, informe ejecutivo, guion de demo y guía/plantilla de prueba externa. Build Vite verde; 72 pruebas pasan en Docker. | — | — |
+| C | Interfaz y documentación | `maquina-c/ux-docs` | Finalizado: UI y documentación; fallback demo visible; TLS de runtime; errores del proveedor accionables; ejecución generada sin privilegios y con entorno filtrado. Validación final: build Vite verde, 116 pruebas pasan (2 omitidas), handshake TLS 1.3 y demo E2E 6/6 con paquete HTTP 200. | — | — |
 
 ## Pedidos a otras máquinas
 
@@ -37,12 +37,11 @@ el repo con el volumen.
 directo, la validación devuelve `REPO_HOST_UNRESOLVED` (el usuario puede subir un .zip). Si la demo se hace
 detrás del proxy de TCS, avisar a B para ajustar.
 
-### C-2 · Certificados del proxy en tiempo de ejecución (Dockerfile, dueña: Máquina C)
-El Dockerfile borra los certificados de TCS al final del build (`rm ... aiproxy.tcs.in.crt` + `update-ca-certificates --fresh`).
-Si la corrida real sale a internet por el proxy de TCS (o `ANTHROPIC_BASE_URL` apunta a él), las llamadas al
-LLM y los `git clone` fallarán por TLS **en ejecución**. Además el SDK de Anthropic (httpx) usa el paquete
-`certifi`, no el almacén del sistema. Si aplica: conservar los certificados en la imagen final y agregar
-`ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`. Fuera de la red de TCS no hace falta.
+### C-2 · Certificados del proxy en tiempo de ejecución — RESUELTO por la Máquina C
+La imagen final conserva los certificados corporativos y define `SSL_CERT_FILE` y `REQUESTS_CA_BUNDLE`
+contra el almacén del sistema. Se verificó desde el contenedor un handshake TLS 1.3 con el proveedor sin
+desactivar la validación. El cliente también limita tiempo y reintentos mediante
+`AGENTCS_LLM_TIMEOUT_S` y `AGENTCS_LLM_MAX_RETRIES`, con errores y acciones explícitas para la UI.
 
 ### C-1 · Interfaz (dueña: Máquina C) — informativo
 Nuevos códigos de error en la ingesta: `REPO_HOST_BLOCKED` y `REPO_HOST_UNRESOLVED`. Llegan con `message`

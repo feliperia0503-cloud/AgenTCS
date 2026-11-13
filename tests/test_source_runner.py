@@ -12,10 +12,11 @@ from copilot.contracts import (
     Spec,
 )
 from copilot.engine.oracle import compute_expected
-from copilot.engine.sandbox import resolve
+from copilot.engine.sandbox import ProcResult, resolve
 from copilot.languages.registry import available_sources, get_source
 from copilot.languages.source_runner import (
-    HarnessFailure, HarnessPlan, InputField, RunnerConfig, normalize, render_stdin, validate_plan,
+    GenericLegacyRunner, HarnessFailure, HarnessPlan, InputField, OutputField, RunnerConfig, normalize,
+    render_stdin, validate_plan,
 )
 from tests.test_engine import CORRECT, FakeLLM, prepared, run_loop  # noqa: F401  (prepared es fixture)
 
@@ -273,6 +274,18 @@ def test_driver_must_use_the_legacy_code():
                                                 files={"agentcs_driver.cbl": "DISPLAY '@@interes=1.00'"}))
     with pytest.raises(HarnessFailure, match="debe usar el código legacy"):
         validate_plan(fake, LEGACY_FILES, make_spec("cobol"), CFG)
+
+
+def test_nonzero_legacy_exit_is_never_accepted_as_level_a(monkeypatch, tmp_path):
+    cfg = RunnerConfig(tools=[], build=[], run=["legacy"])
+    runner = GenericLegacyRunner("cobol", "COBOL", cfg, files=LEGACY_FILES)
+    direct = HarnessPlan(mode="direct", entry="INTERES.cbl",
+                         inputs=[InputField(name="monto"), InputField(name="tasa")],
+                         outputs=[OutputField(name="interes", pattern=r"@@interes=(.*)")])
+    monkeypatch.setattr("copilot.languages.source_runner.run_cmd",
+                        lambda *args, **kwargs: ProcResult(7, "@@interes=1.00\n", "ABEND"))
+    with pytest.raises(HarnessFailure, match="terminó con código 7"):
+        runner._execute(direct, make_spec("cobol"), CASES[:1], tmp_path)
 
 
 def test_normalize_handles_legacy_number_formats():

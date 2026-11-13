@@ -268,6 +268,21 @@ def test_llm_caches_real_calls(tmp_path):
     assert len(sdk_calls) == 1 and llm.tokens_used == 15
 
 
+def test_llm_maps_provider_timeout_to_actionable_error(tmp_path):
+    class APITimeoutError(Exception):
+        pass
+
+    def create(**_kwargs):
+        raise APITimeoutError("detalle interno")
+
+    llm = AnthropicLLM("m", cache_dir=tmp_path,
+                       client=SimpleNamespace(messages=SimpleNamespace(create=create)))
+    with pytest.raises(LLMError) as error:
+        llm.complete("s", "p", agent="extractor", phase=Phase.EXTRACCION)
+    assert error.value.code == "PROVIDER_TIMEOUT"
+    assert "modo demo/replay" in error.value.action
+
+
 def test_complete_json_retries_with_validation_error():
     llm = FakeLLM({"tests": ["no es json", CASES]})
     resp = complete_json(llm, "s", "p", CasesResponse, agent="tests", phase=Phase.VERIFICACION)

@@ -178,12 +178,15 @@ class CSharpTarget(BaseTarget):
         (project / HARNESS).write_text(HARNESS_SOURCE, encoding="utf-8")
         # Sin servidores de compilación ni nodos reutilizables: si quedan vivos, retienen la salida capturada
         # y el proceso parece colgado hasta el timeout.
+        # AgenTCS controla el csproj y no ejecuta código aquí. CoreCLR/NuGet no puede crear su mutex
+        # de migración después de setuid; el binario resultante sí se ejecuta aislado en run_harness.
+        build_env = _DOTNET_ENV | {"HOME": str(project), "DOTNET_CLI_HOME": str(project)}
         return to_build(run_cmd(["dotnet", "build", PROJECT, "-c", "Release", "-o", OUT, "--nologo", "-v", "q",
                                  "--disable-build-servers", "-nodeReuse:false"], project, timeout=300,
-                                extra_env=_DOTNET_ENV))
+                                extra_env=build_env))
 
     def run_harness(self, project: Path, cases: list[Case]) -> list[CaseOutput]:
         write_cases(project, cases)
         result = run_cmd(["dotnet", f"{OUT}/AgenTCSVerify.dll", "cases.json", "actual.json"], project,
-                         extra_env=_DOTNET_ENV)
+                         extra_env=_DOTNET_ENV, isolated=True)
         return read_actual(project, result)

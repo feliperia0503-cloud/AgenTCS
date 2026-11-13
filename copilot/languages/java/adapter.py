@@ -190,9 +190,11 @@ class JavaTarget(BaseTarget):
             return BuildResult(ok=False, log="Falta src/main/java/app/Entry.java con public static Object run(Map<String,Object> input).")
         (project / HARNESS).write_text(HARNESS_SOURCE, encoding="utf-8")
         files = [f for f in sources(project, ".java", exclude={HARNESS})]
-        return to_build(run_cmd(["javac", "-encoding", "UTF-8", "-d", CLASSES, *files, HARNESS], project))
+        return to_build(run_cmd(["javac", "-encoding", "UTF-8", "-d", CLASSES, *files, HARNESS], project,
+                                isolated=True))
 
     def run_harness(self, project: Path, cases: list[Case]) -> list[CaseOutput]:
         write_cases(project, cases)
-        result = run_cmd(["java", "-cp", CLASSES, "AgenTCSHarness", "cases.json", "actual.json"], project)
+        result = run_cmd(["java", "-cp", CLASSES, "AgenTCSHarness", "cases.json", "actual.json"], project,
+                         isolated=True)
         return read_actual(project, result)

@@ -67,6 +67,16 @@ ENV NODE_PATH=/usr/local/lib/node_modules
 # Precalienta .NET (primer uso y paquetes de referencia) para verificar C# sin red durante la demo
 RUN dotnet new console -o /tmp/warm --no-restore >/dev/null && dotnet build /tmp/warm -v q >/dev/null && rm -rf /tmp/warm
 
+# Los compiladores y programas no confiables se ejecutan con este usuario, nunca como root.
+# Esta capa queda después de instalar los runtimes para conservar la caché pesada al ajustar el sandbox.
+RUN groupadd --system --gid 10001 agentcs-sandbox \
+ && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin agentcs-sandbox
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    AGENTCS_SANDBOX_UID=10001 \
+    AGENTCS_SANDBOX_GID=10001
+
 # Código del proyecto + interfaz compilada
 COPY . .
 COPY --from=ui /ui/dist /app/ui/dist
@@ -80,11 +90,7 @@ RUN if [ -f copilot/languages/java/templates/pom.xml ]; then \
       && NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm ci; fi \
  && if ls copilot/languages/csharp/templates/*.sln >/dev/null 2>&1; then \
       dotnet restore copilot/languages/csharp/templates; fi \
- && rm -f /usr/local/share/ca-certificates/AZRGAIDROOTCA-CA.crt \
-          /usr/local/share/ca-certificates/AI-AZRGAIDSUBCA1-CA-1.crt \
-          /usr/local/share/ca-certificates/aiproxy.tcs.in.crt \
- && rm -rf /app/docker/certs \
- && update-ca-certificates --fresh
+ && rm -rf /app/docker/certs
 
 ENV SEMGREP_ENABLE_VERSION_CHECK=0
 

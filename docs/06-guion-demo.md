@@ -33,7 +33,8 @@
 ## Plan de contingencia
 
 1. **Modo en vivo.** Es el recorrido principal. Si una fase no avanza en 15 segundos o aparece un error no previsto, explicar el estado una sola vez y pasar a replay.
-2. **Modo replay.** Reiniciar con las respuestas cacheadas usando el mismo `AGENTCS_MODEL`. Mantener la UI y todos los pasos del guion; indicar claramente que la inferencia está reproducida, mientras análisis, gates y presentación de evidencia siguen ejecutándose.
-3. **Video.** Si Docker, el runner o la máquina fallan, reproducir el video completo sin cortes y usar la UI abierta únicamente para responder preguntas. El video debe incluir el caso representativo, el caso borde, la entrada inválida, el nivel de oráculo y la descarga.
+2. **Modo replay.** Usarlo solo después de ensayar el mismo archivo, destino y `AGENTCS_MODEL` y confirmar que no existe ningún `REPLAY_MISS`. Mantener la UI y todos los pasos del guion; indicar claramente que la inferencia está reproducida, mientras análisis, gates y presentación de evidencia siguen ejecutándose.
+3. **Modo demo precomputado.** Si el replay no cubre el caso, ejecutar `$env:AGENTCS_MODE='demo'; docker compose up -d --force-recreate`. La UI mostrará “Modo demo precomputado” y permitirá recorrer HITL, verificación y descarga sin LLM; declarar este nivel de evidencia como C.
+4. **Video.** Si Docker, el runner o la máquina fallan, reproducir el video completo sin cortes y usar la UI abierta únicamente para responder preguntas. El video debe incluir el caso representativo, el caso borde, la entrada inválida, el nivel de oráculo y la descarga.
 
 La contingencia nunca cambia resultados ni oculta fallos: solo cambia el medio con el que se muestra una corrida ya verificada.

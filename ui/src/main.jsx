@@ -176,6 +176,7 @@ function App() {
   const [section, setSection] = useState('migration');
   const [mobileNav, setMobileNav] = useState(false);
   const [catalog, setCatalog] = useState(null);
+  const [apiMode, setApiMode] = useState(null);
   const [catalogError, setCatalogError] = useState(null);
   const [repo, setRepo] = useState('');
   const [branch, setBranch] = useState('');
@@ -195,6 +196,10 @@ function App() {
     if (!loggedIn || catalog) return;
     api.catalog().then(setCatalog).catch(err => setCatalogError({ message: err.message, action: err.action }));
   }, [loggedIn, catalog]);
+  useEffect(() => {
+    if (!loggedIn || apiMode) return;
+    api.health().then(result => setApiMode(result.mode)).catch(err => setCatalogError({ message: err.message, action: err.action }));
+  }, [loggedIn, apiMode]);
   useRunPolling(run, setRun, setRunError);
 
   const languageInfo = catalog?.languages.find(l => l.id === language);
@@ -226,7 +231,9 @@ function App() {
     setStarting(true);
     setRunError(null);
     try {
-      setRun(await api.createRun({ files, repoUrl: repo, branch, targetLanguage: language, framework, architecture, demo: false }));
+      const demoMode = apiMode === 'demo';
+      setRun(await api.createRun({ files: demoMode ? [] : files, repoUrl: demoMode ? '' : repo,
+        branch: demoMode ? '' : branch, targetLanguage: language, framework, architecture, demo: demoMode }));
     } catch (err) {
       setRunError({ message: err.message, action: err.action });
     } finally {
@@ -256,6 +263,7 @@ function App() {
         : section === 'rules' ? <RulesView {...shared}/>
         : section === 'home' ? <Overview {...shared}/>
         : <MigrationView {...shared} catalog={catalog} catalogError={catalogError} languageInfo={languageInfo}
+            demoMode={apiMode === 'demo'}
             repo={repo} setRepo={setRepo} branch={branch} setBranch={setBranch} files={files} setFiles={setFiles}
             language={language} chooseLanguage={chooseLanguage} framework={framework} setFramework={setFramework}
             architecture={architecture} setArchitecture={setArchitecture} suggesting={suggesting} suggest={suggest}
@@ -287,11 +295,12 @@ function PhaseList({ run }) {
 
 // ---------------------------------------------------------------- vista de migración
 function MigrationView(props) {
-  const { run, runError, setSection, catalog, catalogError, languageInfo, repo, setRepo, branch, setBranch, files, setFiles,
+  const { run, runError, setSection, catalog, catalogError, languageInfo, demoMode, repo, setRepo, branch, setBranch, files, setFiles,
     language, chooseLanguage, framework, setFramework, architecture, setArchitecture, suggesting, suggest, suggestion,
     suggestError, starting, startMigration, resetRun } = props;
   const [sourceError, setSourceError] = useState('');
   const hasSource = repo.trim() !== '' || files.length > 0;
+  const sourceReady = demoMode || hasSource;
   const configured = Boolean(language && framework && architecture);
   const blockedByTools = languageInfo && !languageInfo.available;
   const busy = needsPolling(run) || starting;
@@ -307,17 +316,19 @@ function MigrationView(props) {
   return <div className="workspace">
     <section className="page-heading"><div><h1>Configura la migración</h1><p>Conecta el código legacy (cualquier lenguaje), define la tecnología objetivo y conserva cada regla de negocio con evidencia.</p></div>{run && <button className="secondary-button" onClick={resetRun} disabled={busy}>Nueva migración</button>}</section>
     <MigrationRoute run={run}/>
+    {demoMode && !run && <div className="target-guidance demo-mode" role="note"><Icon name="play" size={18}/><div><strong>Modo demo precomputado</strong><span>Usa un caso COBOL sintético incluido en AgenTCS y no llama al LLM. Para procesar archivos, inicia el contenedor con AGENTCS_MODE=real.</span></div></div>}
     <div className="work-grid">
       <section className="migration-form-area">
         <div className="section-title"><div><h2>Sistema de origen</h2><p>COBOL, PL/SQL, Delphi, RPG, VB6, C#, Java antiguo u otro. AgenTCS no modifica el origen.</p></div><span className="safe-label"><Icon name="shield" size={16}/> Solo lectura</span></div>
-        <div className="repo-row"><label className="field-grow">Repositorio Git (GitHub, Bitbucket, GitLab, Azure DevOps…)<div className="input-with-icon"><Icon name="git"/><input value={repo} onChange={e => setRepo(e.target.value)} placeholder="https://bitbucket.org/organizacion/sistema-legacy.git" disabled={Boolean(run)}/></div></label><label>Rama<input value={branch} onChange={e => setBranch(e.target.value)} placeholder="main" disabled={Boolean(run)}/></label></div>
-        <div className="repo-row"><label className="field-grow">O sube archivos o un comprimido (.zip, .tar.gz) <small>— si hay ambos, se usan los archivos</small><input type="file" multiple accept={ARCHIVE_ACCEPT} disabled={Boolean(run)} onChange={e => setFiles(Array.from(e.target.files || []))}/></label></div>
+        <div className="repo-row"><label className="field-grow">Repositorio Git (GitHub, Bitbucket, GitLab, Azure DevOps…)<div className="input-with-icon"><Icon name="git"/><input value={repo} onChange={e => setRepo(e.target.value)} placeholder="https://bitbucket.org/organizacion/sistema-legacy.git" disabled={Boolean(run) || demoMode}/></div></label><label>Rama<input value={branch} onChange={e => setBranch(e.target.value)} placeholder="main" disabled={Boolean(run) || demoMode}/></label></div>
+        <div className="repo-row"><label className="field-grow">O sube archivos o un comprimido (.zip, .tar.gz) <small>— si hay ambos, se usan los archivos</small><input type="file" multiple accept={ARCHIVE_ACCEPT} disabled={Boolean(run) || demoMode} onChange={e => setFiles(Array.from(e.target.files || []))}/></label></div>
         <div className="repo-facts">{run ? <><span><i className="status-dot ok"/> {run.source_ref}</span><span>Origen detectado: {run.source_language}</span><span>{run.files.length} archivo(s)</span><span>{run.sanitization.length} dato(s) sensible(s) enmascarado(s)</span></>
           : suggestion ? <><span><i className="status-dot ok"/> Código analizado</span><span>{suggestion.inventory.languages.map(l => `${l.name} (${l.files})`).join(' · ')}</span><span>{suggestion.inventory.files} archivos · {suggestion.inventory.lines.toLocaleString('es-CO')} líneas</span><span>{suggestion.sanitized_findings} dato(s) sensible(s) enmascarado(s)</span></>
+          : demoMode ? <span><i className="status-dot ok"/> Caso sintético listo para la demostración</span>
           : <span>{files.length ? `${files.length} archivo(s) seleccionado(s): ${files.slice(0, 3).map(f => f.name).join(', ')}${files.length > 3 ? '…' : ''}` : 'Aún sin código'}</span>}</div>
         {sourceError && <div className="inline-error compact" role="alert"><strong>Falta el código</strong><span>{sourceError}</span></div>}
         <hr/>
-        <div className="section-title target-title"><div><h2>Tecnología objetivo</h2><p>Elige libremente lenguaje, framework y arquitectura, o pide una recomendación basada en tu código.</p></div><button className="secondary-button" onClick={requestSuggestion} disabled={suggesting || Boolean(run)} aria-live="polite">{suggesting ? <><span className="spinner dark"/>Analizando código</> : <><Icon name="spark" size={18}/> Sugerir configuración</>}</button></div>
+        <div className="section-title target-title"><div><h2>Tecnología objetivo</h2><p>Elige libremente lenguaje, framework y arquitectura, o pide una recomendación basada en tu código.</p></div><button className="secondary-button" onClick={requestSuggestion} disabled={suggesting || Boolean(run) || demoMode} aria-live="polite">{suggesting ? <><span className="spinner dark"/>Analizando código</> : <><Icon name="spark" size={18}/> Sugerir configuración</>}</button></div>
         <ErrorBox title="No se pudo sugerir la configuración" error={suggestError}/>
         <ErrorBox title="No se pudo cargar el catálogo de destinos" error={catalogError}/>
         <div className="target-config-grid">
@@ -331,7 +342,7 @@ function MigrationView(props) {
           {blockedByTools && <span><b>Este equipo no tiene:</b> {languageInfo.missing_tools.join(', ')}. Ejecuta AgenTCS con Docker para migrar a {languageInfo.label}.</span>}
         </div></div>
         <div className="migration-actions"><p><strong>La migración no sobrescribe el origen.</strong><br/>Extrae reglas, espera tu aprobación, genera el código, lo verifica contra el comportamiento esperado y lo corrige solo.</p>
-          <button className="primary-button" onClick={startMigration} disabled={Boolean(run) || starting || !hasSource || !configured || blockedByTools} aria-live="polite">{starting ? <><span className="spinner"/>Cargando código</> : run ? <><Icon name="check" size={18}/> Migración iniciada</> : <><Icon name="play" size={18}/> Iniciar migración</>}</button></div>
+          <button className="primary-button" onClick={startMigration} disabled={Boolean(run) || starting || !sourceReady || !configured || blockedByTools} aria-live="polite">{starting ? <><span className="spinner"/>Cargando código</> : run ? <><Icon name="check" size={18}/> Migración iniciada</> : <><Icon name="play" size={18}/> {demoMode ? 'Iniciar demostración' : 'Iniciar migración'}</>}</button></div>
         <ErrorBox title="No se pudo continuar" error={runError}/>
         {failed && <div className="inline-error recovery" role="alert"><div><strong>{PHASE_NAMES[failed[0]]} se detuvo</strong><span>{failed[1].gate_message}</span></div><button type="button" onClick={resetRun}>Empezar de nuevo</button></div>}
         {run && awaitingReview(run) && <div className="target-guidance suggested" role="status"><Icon name="rules" size={18}/><div><strong>{run.spec.rules.length} reglas extraídas esperan tu revisión</strong><span>Aprueba, ajusta o rechaza cada una; luego aprueba la especificación para generar el código.</span><button className="text-action" onClick={() => setSection('rules')}>Revisar reglas <Icon name="arrow" size={16}/></button></div></div>}

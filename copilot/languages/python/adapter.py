@@ -58,13 +58,13 @@ class PythonTarget:
         files = [str(p.relative_to(project)) for p in project.rglob("*.py")]
         if not (project / f"{ENTRY_MODULE}.py").is_file():
             return BuildResult(ok=False, log=f"Falta el punto de entrada {ENTRY_MODULE}.py con def run(input).")
-        result = run_cmd([sys.executable, "-m", "py_compile", *files], project)
+        result = run_cmd([sys.executable, "-m", "py_compile", *files], project, isolated=True)
         return BuildResult(ok=result.ok, log=result.tail())
 
     def test(self, project: Path) -> TestResult:
         if not (project / "tests").is_dir():
             return TestResult(passed=0, failed=0, log="Sin pruebas nativas")
-        result = run_cmd([sys.executable, "-m", "pytest", "-q", "tests"], project)
+        result = run_cmd([sys.executable, "-m", "pytest", "-q", "tests"], project, isolated=True)
         return TestResult(passed=int(result.ok), failed=int(not result.ok), log=result.tail())
 
     def run_harness(self, project: Path, cases: list[Case]) -> list[CaseOutput]:

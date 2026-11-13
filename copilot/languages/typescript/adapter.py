@@ -100,10 +100,11 @@ class TypeScriptTarget(BaseTarget):
             return BuildResult(ok=False, log="Falta src/app.ts con export function run(input).")
         (project / HARNESS).write_text(HARNESS_SOURCE, encoding="utf-8")
         (project / "tsconfig.json").write_text(json.dumps(_tsconfig(), indent=2), encoding="utf-8")
-        return to_build(run_cmd(["tsc", "-p", "tsconfig.json"], project))
+        return to_build(run_cmd(["tsc", "-p", "tsconfig.json"], project, isolated=True))
 
     def run_harness(self, project: Path, cases: list[Case]) -> list[CaseOutput]:
         write_cases(project, cases)
         env = {"NODE_PATH": global_modules() or ""}
-        result = run_cmd(["node", "dist/agentcs_harness.js", "cases.json", "actual.json"], project, extra_env=env)
+        result = run_cmd(["node", "dist/agentcs_harness.js", "cases.json", "actual.json"], project,
+                         extra_env=env, isolated=True)
         return read_actual(project, result)

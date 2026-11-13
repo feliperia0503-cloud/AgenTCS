@@ -428,7 +428,8 @@ class GenericLegacyRunner:
         except SandboxError as exc:
             raise HarnessFailure(f"ruta inválida: {exc}") from exc
         if self.config.build:
-            build = run_cmd(expand(self.config.build, plan=plan, files=self.files, cfg=self.config), project)
+            build = run_cmd(expand(self.config.build, plan=plan, files=self.files, cfg=self.config), project,
+                            isolated=True)
             if not build.ok:
                 raise HarnessFailure(f"No compila. Log:\n{build.tail()}")
         types = _field_types(spec.io.inputs)
@@ -436,10 +437,13 @@ class GenericLegacyRunner:
         parser = parse_driver if plan.mode == "driver" else parse_direct
         outputs, failures = [], []
         for case in cases:
-            result = run_cmd(command, project, timeout=CASE_TIMEOUT, stdin=render_stdin(plan, case, types))
+            result = run_cmd(command, project, timeout=CASE_TIMEOUT, stdin=render_stdin(plan, case, types),
+                             isolated=True)
             try:
                 if result.timed_out:
                     raise HarnessFailure("tiempo agotado (¿espera más líneas de stdin de las enviadas?)")
+                if result.returncode != 0:
+                    raise HarnessFailure(f"el legacy terminó con código {result.returncode}: {result.tail(600)}")
                 outputs.append(to_case_output(case.id, parser(result.stdout, spec, plan), spec))
             except HarnessFailure as exc:
                 failures.append(f"caso {case.id} entrada {case.input}: {exc}\n  stdout: {result.stdout[-600:]!r}"

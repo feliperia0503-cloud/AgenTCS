@@ -152,6 +152,8 @@ hr { border:0; border-top:1px solid var(--line); margin:28px 0; }
 .target-guidance span { font-size:11px; line-height:1.45; }
 .target-guidance.suggested { background:#e4f1ec; color:#315e51; }
 .target-guidance.suggested > svg { color:var(--teal-dark); }
+.target-guidance.demo-mode { margin:0 0 24px; background:#f7e6c0; color:#654f1e; }
+.target-guidance.demo-mode > svg { color:#865b0e; }
 .migration-actions { display:flex; align-items:center; justify-content:space-between; gap:26px; margin-top:28px; padding-top:22px; border-top:1px solid var(--line); }
 .migration-actions p { color:var(--muted); font-size:11px; margin:0; line-height:1.5; }
 .migration-actions p strong { color:var(--ink); }

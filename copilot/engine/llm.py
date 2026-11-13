@@ -69,9 +69,25 @@ class AnthropicLLM:
             raise LLMError("REPLAY_MISS", "Modo replay activo y no hay respuesta en caché para esta solicitud.",
                            "Ejecuta una vez con conexión y ANTHROPIC_API_KEY para poblar output/llm_cache.")
         start = time.monotonic()
-        response = self._sdk().messages.create(
-            model=self.model, max_tokens=self.max_tokens, system=system,
-            messages=[{"role": "user", "content": prompt}])
+        try:
+            response = self._sdk().messages.create(
+                model=self.model, max_tokens=self.max_tokens, system=system,
+                messages=[{"role": "user", "content": prompt}])
+        except Exception as exc:
+            error_name = type(exc).__name__
+            if error_name == "APITimeoutError":
+                raise LLMError("PROVIDER_TIMEOUT", "El proveedor no respondió dentro del tiempo límite.",
+                               "Reintenta o activa el modo demo/replay para continuar sin depender de la red.") from exc
+            if error_name == "APIConnectionError":
+                raise LLMError("PROVIDER_CONNECTION", "No fue posible conectar con el proveedor del modelo.",
+                               "Verifica red y certificados; para la demo usa el modo precomputado.") from exc
+            if error_name == "AuthenticationError":
+                raise LLMError("PROVIDER_AUTH", "El proveedor rechazó la autenticación.",
+                               "Verifica ANTHROPIC_API_KEY sin copiarla en registros ni documentos.") from exc
+            if error_name == "RateLimitError":
+                raise LLMError("PROVIDER_RATE_LIMIT", "El proveedor limitó temporalmente las solicitudes.",
+                               "Espera y reintenta, o usa el modo demo/replay.") from exc
+            raise
         text = "".join(getattr(b, "text", "") for b in response.content)
         usage = getattr(response, "usage", None)
         tin, tout = getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0)
@@ -87,7 +103,9 @@ class AnthropicLLM:
                 raise LLMError("NO_API_KEY", "No hay ANTHROPIC_API_KEY configurada.",
                                "Agrega la llave en .env o usa AGENTCS_LLM_REPLAY=1 con una caché existente.")
             import anthropic  # import diferido: las pruebas no lo necesitan
-            self._client = anthropic.Anthropic()
+            timeout_s = max(10.0, float(os.environ.get("AGENTCS_LLM_TIMEOUT_S", "120")))
+            max_retries = max(0, int(os.environ.get("AGENTCS_LLM_MAX_RETRIES", "1")))
+            self._client = anthropic.Anthropic(timeout=timeout_s, max_retries=max_retries)
         return self._client
 
     def _record(self, phase: Phase, agent: str, key: str, tin: int, tout: int, secs: float, *, replayed: bool) -> None:
