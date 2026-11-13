@@ -231,9 +231,9 @@ function App() {
     setStarting(true);
     setRunError(null);
     try {
-      const demoMode = apiMode === 'demo';
-      setRun(await api.createRun({ files: demoMode ? [] : files, repoUrl: demoMode ? '' : repo,
-        branch: demoMode ? '' : branch, targetLanguage: language, framework, architecture, demo: demoMode }));
+      const useDemoCase = apiMode === 'demo' && files.length === 0 && !repo.trim();
+      setRun(await api.createRun({ files: useDemoCase ? [] : files, repoUrl: useDemoCase ? '' : repo,
+        branch: useDemoCase ? '' : branch, targetLanguage: language, framework, architecture, demo: useDemoCase }));
     } catch (err) {
       setRunError({ message: err.message, action: err.action });
     } finally {
@@ -316,19 +316,20 @@ function MigrationView(props) {
   return <div className="workspace">
     <section className="page-heading"><div><h1>Configura la migración</h1><p>Conecta el código legacy (cualquier lenguaje), define la tecnología objetivo y conserva cada regla de negocio con evidencia.</p></div>{run && <button className="secondary-button" onClick={resetRun} disabled={busy}>Nueva migración</button>}</section>
     <MigrationRoute run={run}/>
-    {demoMode && !run && <div className="target-guidance demo-mode" role="note"><Icon name="play" size={18}/><div><strong>Modo demo precomputado</strong><span>Usa un caso COBOL sintético incluido en AgenTCS y no llama al LLM. Para procesar archivos, inicia el contenedor con AGENTCS_MODE=real.</span></div></div>}
+    {demoMode && !run && !hasSource && <div className="target-guidance demo-mode" role="note"><Icon name="play" size={18}/><div><strong>Caso demo disponible</strong><span>Conecta un repositorio o sube archivos para procesar tu propio código. Si continúas sin origen, AgenTCS usará un caso COBOL sintético precomputado.</span></div></div>}
     <div className="work-grid">
       <section className="migration-form-area">
-        <div className="section-title"><div><h2>Sistema de origen</h2><p>COBOL, PL/SQL, Delphi, RPG, VB6, C#, Java antiguo u otro. AgenTCS no modifica el origen.</p></div><span className="safe-label"><Icon name="shield" size={16}/> Solo lectura</span></div>
-        <div className="repo-row"><label className="field-grow">Repositorio Git (GitHub, Bitbucket, GitLab, Azure DevOps…)<div className="input-with-icon"><Icon name="git"/><input value={repo} onChange={e => setRepo(e.target.value)} placeholder="https://bitbucket.org/organizacion/sistema-legacy.git" disabled={Boolean(run) || demoMode}/></div></label><label>Rama<input value={branch} onChange={e => setBranch(e.target.value)} placeholder="main" disabled={Boolean(run) || demoMode}/></label></div>
-        <div className="repo-row"><label className="field-grow">O sube archivos o un comprimido (.zip, .tar.gz) <small>— si hay ambos, se usan los archivos</small><input type="file" multiple accept={ARCHIVE_ACCEPT} disabled={Boolean(run) || demoMode} onChange={e => setFiles(Array.from(e.target.files || []))}/></label></div>
+        <div className="section-title"><div><h2>Sistema de origen</h2><p>COBOL, PL/SQL, Delphi, RPG, VB6, C#, Java antiguo u otro. AgenTCS analiza una copia y conserva intacto el código original.</p></div><span className="safe-label" title="AgenTCS nunca escribe en el repositorio ni en los archivos originales"><Icon name="shield" size={16}/> No modifica el origen</span></div>
+        <div className="repo-row"><label className="field-grow">Repositorio Git (GitHub, Bitbucket, GitLab, Azure DevOps…)<div className="input-with-icon"><Icon name="git"/><input value={repo} onChange={e => { setRepo(e.target.value); if (e.target.value.trim()) setSourceError(''); }} placeholder="https://bitbucket.org/organizacion/sistema-legacy.git" disabled={Boolean(run)}/></div></label><label>Rama<input value={branch} onChange={e => setBranch(e.target.value)} placeholder="main" disabled={Boolean(run)}/></label></div>
+        <div className="repo-row"><label className="field-grow">O sube archivos o un comprimido (.zip, .tar.gz) <small>— si hay ambos, se usan los archivos</small><input type="file" multiple accept={ARCHIVE_ACCEPT} disabled={Boolean(run)} onChange={e => { const selected = Array.from(e.target.files || []); setFiles(selected); if (selected.length) setSourceError(''); }}/></label></div>
         <div className="repo-facts">{run ? <><span><i className="status-dot ok"/> {run.source_ref}</span><span>Origen detectado: {run.source_language}</span><span>{run.files.length} archivo(s)</span><span>{run.sanitization.length} dato(s) sensible(s) enmascarado(s)</span></>
           : suggestion ? <><span><i className="status-dot ok"/> Código analizado</span><span>{suggestion.inventory.languages.map(l => `${l.name} (${l.files})`).join(' · ')}</span><span>{suggestion.inventory.files} archivos · {suggestion.inventory.lines.toLocaleString('es-CO')} líneas</span><span>{suggestion.sanitized_findings} dato(s) sensible(s) enmascarado(s)</span></>
+          : hasSource ? <span><i className="status-dot ok"/> {files.length ? `${files.length} archivo(s) seleccionado(s): ${files.slice(0, 3).map(f => f.name).join(', ')}${files.length > 3 ? '…' : ''}` : `Repositorio listo${branch.trim() ? ` · rama ${branch.trim()}` : ''}`}</span>
           : demoMode ? <span><i className="status-dot ok"/> Caso sintético listo para la demostración</span>
-          : <span>{files.length ? `${files.length} archivo(s) seleccionado(s): ${files.slice(0, 3).map(f => f.name).join(', ')}${files.length > 3 ? '…' : ''}` : 'Aún sin código'}</span>}</div>
+          : <span>Aún sin código</span>}</div>
         {sourceError && <div className="inline-error compact" role="alert"><strong>Falta el código</strong><span>{sourceError}</span></div>}
         <hr/>
-        <div className="section-title target-title"><div><h2>Tecnología objetivo</h2><p>Elige libremente lenguaje, framework y arquitectura, o pide una recomendación basada en tu código.</p></div><button className="secondary-button" onClick={requestSuggestion} disabled={suggesting || Boolean(run) || demoMode} aria-live="polite">{suggesting ? <><span className="spinner dark"/>Analizando código</> : <><Icon name="spark" size={18}/> Sugerir configuración</>}</button></div>
+        <div className="section-title target-title"><div><h2>Tecnología objetivo</h2><p>Elige libremente lenguaje, framework y arquitectura, o pide una recomendación basada en tu código.</p></div><button className="secondary-button" onClick={requestSuggestion} disabled={suggesting || Boolean(run)} aria-live="polite">{suggesting ? <><span className="spinner dark"/>Analizando código</> : <><Icon name="spark" size={18}/> Sugerir configuración</>}</button></div>
         <ErrorBox title="No se pudo sugerir la configuración" error={suggestError}/>
         <ErrorBox title="No se pudo cargar el catálogo de destinos" error={catalogError}/>
         <div className="target-config-grid">
@@ -342,7 +343,7 @@ function MigrationView(props) {
           {blockedByTools && <span><b>Este equipo no tiene:</b> {languageInfo.missing_tools.join(', ')}. Ejecuta AgenTCS con Docker para migrar a {languageInfo.label}.</span>}
         </div></div>
         <div className="migration-actions"><p><strong>La migración no sobrescribe el origen.</strong><br/>Extrae reglas, espera tu aprobación, genera el código, lo verifica contra el comportamiento esperado y lo corrige solo.</p>
-          <button className="primary-button" onClick={startMigration} disabled={Boolean(run) || starting || !sourceReady || !configured || blockedByTools} aria-live="polite">{starting ? <><span className="spinner"/>Cargando código</> : run ? <><Icon name="check" size={18}/> Migración iniciada</> : <><Icon name="play" size={18}/> {demoMode ? 'Iniciar demostración' : 'Iniciar migración'}</>}</button></div>
+          <button className="primary-button" onClick={startMigration} disabled={Boolean(run) || starting || !sourceReady || !configured || blockedByTools} aria-live="polite">{starting ? <><span className="spinner"/>{demoMode && !hasSource ? 'Preparando demostración' : 'Cargando código'}</> : run ? <><Icon name="check" size={18}/> Migración iniciada</> : <><Icon name="play" size={18}/> {demoMode && !hasSource ? 'Iniciar caso demo' : 'Iniciar migración'}</>}</button></div>
         <ErrorBox title="No se pudo continuar" error={runError}/>
         {failed && <div className="inline-error recovery" role="alert"><div><strong>{PHASE_NAMES[failed[0]]} se detuvo</strong><span>{failed[1].gate_message}</span></div><button type="button" onClick={resetRun}>Empezar de nuevo</button></div>}
         {run && awaitingReview(run) && <div className="target-guidance suggested" role="status"><Icon name="rules" size={18}/><div><strong>{run.spec.rules.length} reglas extraídas esperan tu revisión</strong><span>Aprueba, ajusta o rechaza cada una; luego aprueba la especificación para generar el código.</span><button className="text-action" onClick={() => setSection('rules')}>Revisar reglas <Icon name="arrow" size={16}/></button></div></div>}
