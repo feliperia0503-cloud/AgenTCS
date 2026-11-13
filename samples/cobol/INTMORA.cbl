@@ -1,0 +1,53 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. INTMORA.
+      *----------------------------------------------------------------
+      * PROGRAMA SINTETICO PARA LA DEMO DE AGENTCS. SIN DATOS REALES.
+      * CALCULA EL INTERES DE MORA DE UN SALDO VENCIDO.
+      * - BASE 360 DIAS, MAXIMO 360 DIAS DE MORA.
+      * - SALDOS MENORES A 1000.00 ESTAN EXENTOS (CODIGO EX).
+      * - SIN DIAS DE MORA NO HAY INTERES (CODIGO SM).
+      * - LA TASA DIARIA SE TRUNCA A 8 DECIMALES; EL INTERES SE
+      *   REDONDEA A 2 DECIMALES (ROUNDED = MITAD HACIA ARRIBA).
+      *----------------------------------------------------------------
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  WS-SALDO-MINIMO        PIC 9(7)V99   VALUE 1000.00.
+       01  WS-DIAS-MAXIMOS        PIC 9(3)      VALUE 360.
+       01  WS-BASE-DIAS           PIC 9(3)      VALUE 360.
+       01  WS-DIAS-CALCULO        PIC 9(3)      VALUE ZERO.
+       01  WS-TASA-DIARIA         PIC 9V9(8)    VALUE ZERO.
+       LINKAGE SECTION.
+       01  LK-ENTRADA.
+           05  LK-SALDO-VENCIDO   PIC S9(9)V99.
+           05  LK-TASA-ANUAL      PIC 9V9(4).
+           05  LK-DIAS-MORA       PIC S9(4).
+       01  LK-SALIDA.
+           05  LK-INTERES         PIC S9(9)V99.
+           05  LK-TOTAL           PIC S9(9)V99.
+           05  LK-COD-RESULTADO   PIC X(2).
+       PROCEDURE DIVISION USING LK-ENTRADA LK-SALIDA.
+       0000-PRINCIPAL.
+           MOVE ZERO TO LK-INTERES
+           MOVE "00" TO LK-COD-RESULTADO
+           PERFORM 1000-VALIDAR
+           IF LK-COD-RESULTADO = "00"
+              PERFORM 2000-CALCULAR-INTERES
+           END-IF
+           COMPUTE LK-TOTAL = LK-SALDO-VENCIDO + LK-INTERES
+           GOBACK.
+       1000-VALIDAR.
+           IF LK-SALDO-VENCIDO < WS-SALDO-MINIMO
+              MOVE "EX" TO LK-COD-RESULTADO
+           END-IF
+           IF LK-DIAS-MORA NOT > ZERO
+              MOVE "SM" TO LK-COD-RESULTADO
+           END-IF.
+       2000-CALCULAR-INTERES.
+           IF LK-DIAS-MORA > WS-DIAS-MAXIMOS
+              MOVE WS-DIAS-MAXIMOS TO WS-DIAS-CALCULO
+           ELSE
+              MOVE LK-DIAS-MORA TO WS-DIAS-CALCULO
+           END-IF
+           COMPUTE WS-TASA-DIARIA = LK-TASA-ANUAL / WS-BASE-DIAS
+           COMPUTE LK-INTERES ROUNDED =
+                   LK-SALDO-VENCIDO * WS-TASA-DIARIA * WS-DIAS-CALCULO.

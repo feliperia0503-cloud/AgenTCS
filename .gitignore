@@ -223,6 +223,9 @@ __marimo__/
 # Paquetes de migración generados por cada ejecución
 output/*
 !output/.gitkeep
+# Caché del LLM versionada: permite la demo sin internet ni créditos (AGENTCS_LLM_REPLAY=1).
+# Solo contiene prompts ya sanitizados de samples/ sintéticos; revisar con gitleaks antes de cada commit.
+!output/llm_cache/
 # Imagen exportada para la demo (docker save)
 *.tar
 # Destinos generados: Node y .NET
