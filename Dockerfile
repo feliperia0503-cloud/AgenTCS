@@ -34,7 +34,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 COPY docker/certs/*.crt /usr/local/share/ca-certificates/
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gnucobol mono-mcs mono-runtime php-cli fp-compiler \
+        gnucobol mono-mcs \
         openjdk-21-jdk-headless maven \
         dotnet-sdk-8.0 \
         python3 python3-venv git curl ca-certificates \
@@ -60,17 +60,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN uv venv /opt/venv && UV_SYSTEM_CERTS=true uv pip install --no-cache -r requirements.txt
 
-<<<<<<< Updated upstream
-# TypeScript global para los proyectos destino Node
-RUN NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm install -g typescript
-=======
 # Destino TypeScript: compilador y decimal.js globales (la verificación no descarga dependencias)
-RUN npm install -g typescript@5 decimal.js@10
+RUN NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm install -g typescript@5 decimal.js@10
 ENV NODE_PATH=/usr/local/lib/node_modules
 
 # Precalienta .NET (primer uso y paquetes de referencia) para verificar C# sin red durante la demo
 RUN dotnet new console -o /tmp/warm --no-restore >/dev/null && dotnet build /tmp/warm -v q >/dev/null && rm -rf /tmp/warm
->>>>>>> Stashed changes
 
 # Código del proyecto + interfaz compilada
 COPY . .
