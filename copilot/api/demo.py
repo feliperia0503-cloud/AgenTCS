@@ -15,6 +15,7 @@ from copilot.contracts import (
     RunState, SourceRef, Spec, Unit, UnitKind, Variable,
 )
 from copilot.security import Sanitizer
+from copilot.engine.loop import similarity
 from copilot.verification import compare
 
 DEMO_FILE = Path(__file__).parent / "demo_data" / "AMORTIZA.cbl"
@@ -306,12 +307,12 @@ def complete_demo_run(state: RunState) -> RunState:
     kw = dict(target_language=state.target_language, oracle_level=OracleLevel.C,
               oracle_description=ORACLE_DESCRIPTION)
     state.actual = _run_reference(state.cases, interest_rounding_bug=True)
-    state.set_verification(compare(state.spec, state.cases, state.expected, state.actual, attempt=1, **kw))
+    first = compare(state.spec, state.cases, state.expected, state.actual, attempt=1, **kw)
+    state.set_verification(first.model_copy(update={"similarity": similarity(first, state.expected)}))
     state.generation_attempts = 2   # autocorrección: el agente recibe los casos fallidos + BR-005
     state.actual = _run_reference(state.cases)
     report = compare(state.spec, state.cases, state.expected, state.actual, attempt=2, **kw)
-    state.set_verification(report.model_copy(update={
-        "coverage_lines": 86.4, "coverage_branches": 78.1, "critical_findings": 0, "max_complexity": 4}))
+    state.set_verification(report.model_copy(update={"similarity": similarity(report, state.expected)}))
     fails = state.verification.gate_failures()
     state.finish(Phase.VERIFICACION, ok=not fails,
                  message="; ".join(fails) or f"{report.passed}/{report.total} casos equivalentes en el intento 2")

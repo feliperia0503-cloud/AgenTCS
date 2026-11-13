@@ -58,8 +58,11 @@ esperados (oráculo A/B/C), genera el código destino y lo corrige en bucle con 
 pruebas hasta lograr equivalencia total o dejar de mejorar; devuelve siempre la mejor versión y guarda
 lecciones para futuras migraciones (no es fine-tuning).
 
+Destinos: **Java 21, C# (.NET 8), TypeScript (Node) y Python**, con el framework y la arquitectura que
+elijas (ADR-006). Origen: cualquier lenguaje, por archivos, comprimidos (.zip, .tar.gz) o repositorio Git.
+
 ```bash
-python -m copilot.engine migrate --source legacy/INTERES.cbl --target python --auto-approve
+python -m copilot.engine migrate --source legacy/INTERES.cbl --target java --auto-approve
 AGENTCS_LLM_REPLAY=1 python -m copilot.engine migrate ...   # sin internet, desde output/llm_cache
 ```
 En la API: `AGENTCS_MODE=real` (con `ANTHROPIC_API_KEY`). El modo `demo` sigue disponible y no usa LLM.

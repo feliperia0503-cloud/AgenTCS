@@ -338,3 +338,35 @@ hr { border:0; border-top:1px solid var(--line); margin:28px 0; }
   .attention-list > button > svg { display:none; }
   .demo-note { align-self:flex-start; }
 }
+
+/* ---- AgenTCS: estados reales de la ejecución ---- */
+.status-badge { display:inline-block; width:max-content; border-radius:999px; padding:4px 9px; font-size:10px; font-style:normal; font-weight:800; margin-right:6px; }
+.status-badge.pendiente { color:#5a4a12; background:#f7e5be; }
+.status-badge.aprobada { color:#1d6549; background:#dcefe5; }
+.status-badge.ajustada { color:#2d5f8b; background:#dce8f2; }
+.status-badge.rechazada { color:#842f2a; background:#f4d7d4; }
+.status-badge.low { color:#7d4500; background:#fbe9c6; }
+.confidence.low { color:#9a5a00; font-weight:800; }
+.code-block { margin:0; background:#10253f; color:#e4ebf1; border-radius:10px; padding:14px 16px; font:12px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; overflow:auto; max-height:300px; white-space:pre; }
+.code-block.light { background:#e9ece7; color:#234052; }
+.code-block.tall { max-height:560px; margin:0 24px 24px; }
+.review-box { display:grid; gap:10px; margin-top:18px; }
+.review-box label { display:grid; gap:6px; font-size:12px; font-weight:700; }
+.review-box textarea { border:1px solid #bcc5c2; border-radius:10px; padding:10px 12px; font:inherit; font-weight:400; resize:vertical; }
+.review-box textarea:focus { outline:3px solid rgba(12,123,118,.18); border-color:var(--teal); }
+.review-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.secondary-button.danger { color:#842f2a; border-color:#e2b8b3; }
+.review-note { font-size:12px; color:var(--muted); margin-top:14px; }
+.phase-list { list-style:none; margin:0; padding:4px 24px 24px; display:grid; gap:12px; }
+.phase-item { display:grid; grid-template-columns:26px 1fr; gap:10px; align-items:start; font-size:12px; }
+.phase-item div { display:grid; gap:3px; }
+.phase-item small { color:var(--muted); line-height:1.45; overflow-wrap:anywhere; }
+.phase-dot { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; background:#e7eae6; color:#59666f; }
+.phase-item.aprobada .phase-dot { background:#dcefe5; color:#1d6549; }
+.phase-item.en_curso .phase-dot, .phase-item.esperando_humano .phase-dot { background:#f7e5be; color:#7d4500; }
+.phase-item.fallida .phase-dot { background:#f4d7d4; color:#842f2a; }
+.route-stop.failed .stop-dot { background:#8c3933; border-color:#e8a29b; color:#fff; }
+.file-tabs { display:flex; flex-wrap:wrap; gap:6px; padding:0 24px 14px; }
+.file-tabs button { border:1px solid #cbd2cf; background:#fff; border-radius:8px; padding:6px 10px; font-size:11px; font-family:ui-monospace, Consolas, monospace; color:var(--ink); }
+.file-tabs button.active { border-color:var(--teal); background:#eaf3ef; color:#064f4c; }
+.target-guidance .text-action { margin-top:6px; }

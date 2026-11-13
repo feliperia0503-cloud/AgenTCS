@@ -24,8 +24,10 @@ _HEADERS: list[tuple[UnitKind, re.Pattern[str]]] = [
         r"[\w<>\[\],.? ]+\s+(\w+)\s*\([^;]*$")),
     (UnitKind.FUNCTION, re.compile(r"^\s*(?:Public |Private |Friend )?(?:Function|Sub)\s+(\w+)", re.IGNORECASE)),
     (UnitKind.FUNCTION, re.compile(r"^\s*(?:async\s+)?def\s+(\w+)\s*\(")),
+    (UnitKind.PROCEDURE, re.compile(r"^\s*(?:FORM|METHOD|FUNCTION|MODULE)\s+([\w/]+)", re.IGNORECASE)),   # ABAP
+    (UnitKind.PROCEDURE, re.compile(r"^\s*(?:BEGSR|DCL-PROC)\s+(\w+)", re.IGNORECASE)),                   # RPG
 ]
-_DECISION = re.compile(r"\b(IF|ELSIF|ELSE IF|WHEN|CASE|WHILE|FOR|UNTIL|PERFORM VARYING|AND|OR|CATCH)\b",
+_DECISION = re.compile(r"\b(IF|ELSIF|ELSE IF|WHEN|CASE|WHILE|FOR|UNTIL|PERFORM VARYING|AND|OR|CATCH|EXCEPT|ELSEIF)\b",
                        re.IGNORECASE)
 
 

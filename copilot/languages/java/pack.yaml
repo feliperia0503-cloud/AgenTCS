@@ -1,0 +1,5 @@
+id: java
+name: Java 21
+role: target
+extensions: [".java"]
+version: 0.1.0

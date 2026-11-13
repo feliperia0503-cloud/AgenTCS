@@ -12,6 +12,8 @@ from copilot.contracts import (
 from copilot.engine.pyharness import run_python_module
 from copilot.engine.sandbox import run_cmd
 
+from ..base import COMMON_RULES
+
 ENTRY_MODULE = "app"
 
 CONVENTIONS = """Destino: Python 3.12, solo biblioteca estándar.
@@ -27,7 +29,8 @@ CONVENTIONS = """Destino: Python 3.12, solo biblioteca estándar.
   usando el modo del tipo neutral (HALF_UP→ROUND_HALF_UP, DOWN→ROUND_DOWN, HALF_EVEN→ROUND_HALF_EVEN).
 - Devuelve decimales como string con la escala exacta del tipo (p. ej. "15.00").
 - Cada función que implemente una regla lleva un comentario `# Regla BR-xxx · archivo:líneas`.
-- Funciones cortas (complejidad ≤ 10), nombres de dominio, sin except vacíos."""
+- Funciones cortas (complejidad ≤ 10), nombres de dominio, sin except vacíos.
+""" + COMMON_RULES
 
 _PY_TYPES = {TypeKind.DECIMAL: "Decimal", TypeKind.INTEGER: "int", TypeKind.FLOAT: "float",
              TypeKind.STRING: "str", TypeKind.DATE: "datetime.date", TypeKind.DATETIME: "datetime.datetime",
@@ -36,6 +39,9 @@ _PY_TYPES = {TypeKind.DECIMAL: "Decimal", TypeKind.INTEGER: "int", TypeKind.FLOA
 
 class PythonTarget:
     info = PackInfo(id="python", name="Python 3.12", role=PackRole.TARGET, extensions=[".py"])
+
+    def missing_tools(self) -> list[str]:
+        return []   # usa el mismo intérprete que ejecuta la plataforma
 
     def from_neutral_type(self, t: NeutralType) -> str:
         if t.kind == TypeKind.LIST and t.item is not None:

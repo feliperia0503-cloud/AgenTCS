@@ -26,7 +26,7 @@ No instalar herramientas en el host; si falta algo, agregarlo al Dockerfile o a 
 ## Comandos
 - Pruebas copiloto: `uv run pytest`
 - Pruebas del código generado: el comando `test` del adaptador de destino (p. ej. `mvn verify`, `npm test`, `dotnet test`, `pytest`)
-- Motor (CLI): `python -m copilot.engine migrate --source <archivos> --target python --auto-approve` (`AGENTCS_LLM_REPLAY=1` para usar solo la caché)
+- Motor (CLI): `python -m copilot.engine migrate --source <archivos o .zip> --target java|csharp|typescript|python --auto-approve` (`AGENTCS_LLM_REPLAY=1` para usar solo la caché)
 - API local: `uvicorn copilot.api.app:app --reload --port 8000` · Interfaz: `cd ui && npm run dev` (5173)
 - Todo: `docker compose up --build` → http://localhost:8000
 

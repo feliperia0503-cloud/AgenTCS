@@ -1,0 +1,5 @@
+id: typescript
+name: TypeScript 5 (Node.js)
+role: target
+extensions: [".ts"]
+version: 0.1.0

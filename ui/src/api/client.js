@@ -44,18 +44,40 @@ const json = (method, data) => ({
 export const api = {
   health: () => request('/health'),
 
+  /**
+   * Analiza el código legacy real con el LLM y recomienda lenguaje, framework y arquitectura.
+   * Usa los archivos si hay; si no, clona el repositorio Git público (solo lectura).
+   * @param {{ files?: File[], repoUrl?: string, branch?: string }} params
+   * @returns {Promise<{ suggestion: Object, inventory: Object, sanitized_findings: number, labels: Object }>}
+   */
+  suggest: ({ files = [], repoUrl, branch }) => {
+    const form = new FormData();
+    files.forEach(file => form.append('files', file));
+    if (repoUrl?.trim()) form.append('repo_url', repoUrl.trim());
+    if (branch?.trim()) form.append('branch', branch.trim());
+    return request('/suggest', { method: 'POST', body: form });
+  },
+
   /** Packs de lenguaje disponibles: { sources: [...], targets: [...] } */
   languages: () => request('/languages'),
 
+  /** Catálogo de destinos: { languages: [{ id, label, available, missing_tools, frameworks }], architectures } */
+  catalog: () => request('/catalog'),
+
   /**
-   * Crea una ejecución.
-   * @param {{ files?: File[], targetLanguage: string, sourceLanguage?: string, domain?: string, demo?: boolean }} params
+   * Crea una ejecución real: sube archivos o comprimidos (.zip, .tar.gz) o indica un repositorio Git.
+   * @param {{ files?: File[], repoUrl?: string, branch?: string, targetLanguage: string, framework?: string,
+   *           architecture?: string, sourceLanguage?: string, domain?: string, demo?: boolean }} params
    * @returns {Promise<Object>} RunState
    */
-  createRun: ({ files = [], targetLanguage, sourceLanguage, domain, demo }) => {
+  createRun: ({ files = [], repoUrl, branch, targetLanguage, framework, architecture, sourceLanguage, domain, demo }) => {
     const form = new FormData();
     files.forEach(file => form.append('files', file));
     form.append('target_language', targetLanguage);
+    if (framework) form.append('target_framework', framework);
+    if (architecture) form.append('target_architecture', architecture);
+    if (repoUrl?.trim()) form.append('repo_url', repoUrl.trim());
+    if (branch?.trim()) form.append('branch', branch.trim());
     if (sourceLanguage) form.append('source_language', sourceLanguage);
     if (domain) form.append('domain', domain);
     if (demo !== undefined) form.append('demo', String(demo));

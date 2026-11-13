@@ -20,32 +20,12 @@ from copilot.contracts import (
 )
 from copilot.security import Sanitizer
 
-from . import demo
+from . import catalog, demo, sources
 
 log = logging.getLogger("agentcs.api")
 
 OUTPUT_DIR = Path(os.environ.get("AGENTCS_OUTPUT", "output")) / "runs"
 DEFAULT_MODE = RunMode(os.environ.get("AGENTCS_MODE", RunMode.DEMO.value))
-
-MAX_FILES = 20
-MAX_FILE_BYTES = 2 * 1024 * 1024
-
-# Catálogo de packs. Cuando existan copilot/languages/*/pack.yaml, se leerá de ahí.
-SOURCES = [
-    {"id": "cobol", "name": "COBOL (GnuCOBOL)", "extensions": [".cbl", ".cob", ".cpy"], "oracle_level": "A", "status": "en construcción"},
-    {"id": "plsql", "name": "PL/SQL (Oracle)", "extensions": [".pks", ".pkb", ".sql", ".prc", ".fnc", ".trg"], "oracle_level": "A", "status": "planeado"},
-    {"id": "csharp-legacy", "name": "C# / VB.NET (.NET Framework)", "extensions": [".cs", ".vb"], "oracle_level": "A", "status": "planeado"},
-    {"id": "java-legacy", "name": "Java legacy (1.4–6)", "extensions": [".java"], "oracle_level": "A", "status": "planeado"},
-    {"id": "rpg", "name": "RPG (IBM i)", "extensions": [".rpg", ".rpgle", ".sqlrpgle"], "oracle_level": "C", "status": "planeado"},
-]
-TARGETS = [
-    {"id": "python", "name": "Python 3.12", "status": "disponible (motor real)"},
-    {"id": "java", "name": "Java 21 + Spring Boot 3", "status": "en construcción"},
-    {"id": "typescript", "name": "TypeScript + Node 20", "status": "planeado"},
-    {"id": "csharp", "name": "C# .NET 8", "status": "planeado"},
-]
-_EXT_TO_SOURCE = {ext: s["id"] for s in SOURCES for ext in s["extensions"]}
-
 
 class ServiceError(Exception):
     def __init__(self, status: int, code: str, message: str, action: str):
@@ -96,39 +76,64 @@ class CopilotService:
 
     # ---------------------------------------------------------------- catálogo
     def languages(self) -> dict:
-        return {"sources": SOURCES, "targets": TARGETS, "mode": self.mode.value}
+        return {"catalog": catalog.catalog(), "mode": self.mode.value,
+                "source_extensions": sorted(sources.EXT_LANGUAGE)}
 
-    # ---------------------------------------------------------------- ejecuciones
+    def catalog(self) -> dict:
+        return catalog.catalog()
+
     def create_run(self, files: list[tuple[str, bytes]], target_language: str,
                    source_language: str | None = None, domain: str | None = None,
-                   demo_mode: bool | None = None) -> RunState:
-        if target_language not in {t["id"] for t in TARGETS}:
-            raise ServiceError(422, "TARGET_NOT_SUPPORTED", f"El destino '{target_language}' no está disponible.",
-                               "Elige un destino de la lista: " + ", ".join(t["id"] for t in TARGETS) + ".")
+                   demo_mode: bool | None = None, *, repo_url: str | None = None, branch: str | None = None,
+                   framework: str | None = None, architecture: str | None = None) -> RunState:
+        self._validate_target(target_language, framework, architecture)
         run_id = uuid.uuid4().hex[:12]
         use_demo = self.mode == RunMode.DEMO if demo_mode is None else demo_mode
-        if use_demo and not files:
+        if use_demo and not files and not (repo_url or "").strip():
             state = demo.build_demo_run(run_id, target_language)
             self.store.save(state)
             return state
-        decoded = self._validate_files(files)
-        if source_language is None:
-            source_language = self._detect(decoded)
-        sanitized, findings = Sanitizer().sanitize_files(decoded)
+        raw = self._collect(files, repo_url, branch)
+        source_language = (source_language or "").strip() or sources.dominant_language(raw)
+        sanitized, findings = Sanitizer().sanitize_files(raw)
         for f in sanitized:
-            f.language = source_language
+            f.language = sources.language_of(f.path)[0]
+        ref = (f"{repo_url.strip()}@{(branch or 'rama por defecto').strip()}" if (repo_url or "").strip() and
+               not files else ", ".join(name for name, _ in files[:5]))
         state = RunState(run_id=run_id, mode=RunMode.REAL, source_language=source_language,
-                         target_language=target_language, domain=domain, files=sanitized,
-                         sanitization=findings)
+                         target_language=target_language, target_framework=framework,
+                         target_architecture=architecture, source_ref=ref, domain=domain,
+                         files=sanitized, sanitization=findings)
+        inv = sources.inventory(raw)
+        langs = ", ".join(f"{l['name']} ({l['files']})" for l in inv["languages"][:4])
         state.start(Phase.INGESTA)
-        state.finish(Phase.INGESTA, ok=True,
-                     message=f"{len(sanitized)} archivo(s) {source_language} · {len(findings)} dato(s) sensible(s) enmascarado(s)")
+        state.finish(Phase.INGESTA, ok=True, message=f"{inv['files']} archivo(s), {inv['lines']} líneas · {langs} · "
+                                                     f"{len(findings)} dato(s) sensible(s) enmascarado(s)")
         self.store.save(state)
         self._dispatch(self._analyze, state)
         return state
 
     def get_run(self, run_id: str) -> RunState:
         return self.store.get(run_id)
+
+    # ---------------------------------------------------------------- sugerencia de destino
+    def suggest_target(self, files: list[tuple[str, bytes]], repo_url: str | None, branch: str | None) -> dict:
+        """Analiza el código legacy real y recomienda lenguaje, framework y arquitectura (usa el LLM)."""
+        from copilot.engine.llm import LLMError
+
+        from .suggest import suggest
+        raw = self._collect(files, repo_url, branch)
+        llm = self._get_engine().llm
+        llm.recorder = None   # la sugerencia no pertenece a ninguna ejecución
+        try:
+            return suggest(llm, raw)
+        except LLMError as exc:
+            status = 503 if exc.code in ("NO_API_KEY", "REPLAY_MISS") else 502
+            raise ServiceError(status, exc.code, exc.message, exc.action) from None
+        except Exception:   # noqa: BLE001 — p. ej. error de red o de cuota del proveedor
+            log.exception("Fallo al sugerir configuración")
+            raise ServiceError(502, "SUGGEST_FAILED", "No se pudo obtener la recomendación del modelo.",
+                               "Reintenta en unos segundos; si persiste, revisa la llave, la cuota y los registros de la API.") from None
 
     # ---------------------------------------------------------------- HITL
     def decide_rule(self, run_id: str, rule_id: str, action: str, by: str,
@@ -239,11 +244,15 @@ class CopilotService:
     def _require_target_pack(target: str) -> None:
         from copilot.languages.registry import PackNotAvailable, get_target
         try:
-            get_target(target)
+            missing = get_target(target).missing_tools()
         except PackNotAvailable as exc:
             raise ServiceError(422, "TARGET_PACK_MISSING",
                                f"El motor real aún no tiene el pack de destino '{target}'.",
                                f"Usa un destino disponible ({', '.join(exc.available)}) o el modo demo.") from None
+        if missing:
+            raise ServiceError(422, "TOOLCHAIN_MISSING",
+                               f"Faltan herramientas para compilar y verificar {target}: {', '.join(missing)}.",
+                               "Ejecuta AgenTCS con Docker (docker compose up), donde ya vienen instaladas, o instálalas localmente.")
 
     # ---------------------------------------------------------------- resultados
     def verification(self, run_id: str) -> dict:
@@ -288,38 +297,25 @@ class CopilotService:
         return state
 
     @staticmethod
-    def _validate_files(files: list[tuple[str, bytes]]) -> list[tuple[str, str]]:
-        if not files:
-            raise ServiceError(422, "NO_FILES", "No se recibió ningún archivo legacy.",
-                               "Adjunta al menos un archivo de código fuente.")
-        if len(files) > MAX_FILES:
-            raise ServiceError(422, "TOO_MANY_FILES", f"Se recibieron {len(files)} archivos (máximo {MAX_FILES}).",
-                               "Sube solo el programa a migrar y sus dependencias directas.")
-        out = []
-        for name, data in files:
-            safe = Path(name).name   # sin rutas: evita path traversal
-            if len(data) > MAX_FILE_BYTES:
-                raise ServiceError(413, "FILE_TOO_LARGE", f"{safe} supera {MAX_FILE_BYTES // 1024 // 1024} MB.",
-                                   "Divide el programa o sube solo la rutina a migrar.")
-            if b"\x00" in data[:4096]:
-                raise ServiceError(422, "BINARY_FILE", f"{safe} parece un archivo binario.",
-                                   "Sube el código fuente en texto (no compilados ni comprimidos).")
-            for enc in ("utf-8", "cp1252", "latin-1"):
-                try:
-                    out.append((safe, data.decode(enc)))
-                    break
-                except UnicodeDecodeError:
-                    continue
-        return out
+    def _collect(files: list[tuple[str, bytes]], repo_url: str | None, branch: str | None) -> list[tuple[str, str]]:
+        if not files and not (repo_url or "").strip():
+            raise ServiceError(422, "NO_SOURCE", "Falta el código a analizar.",
+                               "Sube archivos o un comprimido (.zip, .tar.gz) con el código, o indica la URL de un repositorio Git.")
+        try:
+            return sources.collect(files, repo_url, branch)
+        except sources.SourceError as exc:
+            raise ServiceError(exc.status, exc.code, exc.message, exc.action) from None
 
     @staticmethod
-    def _detect(files: list[tuple[str, str]]) -> str:
-        found = {_EXT_TO_SOURCE.get(Path(n).suffix.lower()) for n, _ in files} - {None}
-        if len(found) == 1:
-            return found.pop()
-        raise ServiceError(422, "LANGUAGE_UNKNOWN",
-                           "No se pudo identificar un único lenguaje de origen por la extensión.",
-                           "Indica el lenguaje de origen manualmente en la configuración.")
+    def _validate_target(language: str, framework: str | None, architecture: str | None) -> None:
+        if language not in catalog.LANGUAGES:
+            raise ServiceError(422, "TARGET_NOT_SUPPORTED", f"El destino '{language}' no está disponible.",
+                               "Elige un destino de la lista: " + ", ".join(catalog.LANGUAGES) + ".")
+        if framework or architecture:
+            problem = catalog.is_valid(language, framework or "none", architecture or "hexagonal")
+            if problem:
+                raise ServiceError(422, "TARGET_CONFIG_INVALID", f"Configuración destino inválida: {problem}.",
+                                   "Elige lenguaje, framework y arquitectura de las listas.")
 
 
 def _traceability(spec: Spec) -> str:

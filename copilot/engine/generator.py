@@ -41,8 +41,12 @@ def _current_files(files: dict[str, str]) -> str:
 
 def generate_project(llm: LLMClient, spec: Spec, target: TargetAdapter, *, attempt: int,
                      previous: dict[str, str] | None = None, feedback: str | None = None,
-                     lessons: list[str] | None = None) -> dict[str, str]:
-    parts = [f"Destino: {target.info.name}\nConvenciones obligatorias:\n{target.conventions()}",
+                     lessons: list[str] | None = None, framework: str | None = None,
+                     architecture: str | None = None) -> dict[str, str]:
+    choice = (f"Framework elegido: {framework or 'ninguno (núcleo puro)'}. Arquitectura elegida: "
+              f"{architecture or 'hexagonal'}. Organiza el código según esa arquitectura y pon los "
+              "adaptadores del framework en `infrastructure/`.")
+    parts = [f"Destino: {target.info.name}\n{choice}\nConvenciones obligatorias:\n{target.conventions()}",
              f"Especificación aprobada (fuente de verdad):\n{spec_for_prompt(spec)}"]
     if lessons:
         parts.append("Lecciones aprendidas en migraciones anteriores de este par de lenguajes:\n"

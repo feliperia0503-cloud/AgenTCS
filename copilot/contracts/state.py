@@ -65,6 +65,9 @@ class RunState(BaseModel):
     mode: RunMode = RunMode.REAL
     source_language: str | None = None    # None => autodetectar
     target_language: str
+    target_framework: str | None = None       # clave del catálogo (spring, aspnet, nestjs, fastapi, none…)
+    target_architecture: str | None = None    # hexagonal, clean, modular, microservices, event-driven
+    source_ref: str | None = None             # repositorio/rama o nombre del comprimido (trazabilidad)
     domain: str | None = None
     created_at: datetime = Field(default_factory=_now)
     approved_by: str | None = None        # quién aprobó la especificación completa (HITL)

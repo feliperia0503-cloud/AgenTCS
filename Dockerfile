@@ -3,7 +3,8 @@
 # agnóstico y los runtimes de ORIGEN (ejecutar el legacy, oráculo nivel A) y de DESTINO
 # (compilar/probar el código generado). En el computador solo se necesita Docker.
 #   Origen:  GnuCOBOL (COBOL) · Mono (C#/.NET Framework) · JDK (Java legacy) · PL/SQL -> servicio 'oracle' en compose
-#   Destino: JDK 21 + Maven (Java) · Node + npm (TypeScript) · .NET 8 SDK (C#) · Python 3 (Python)
+#   Destino: JDK 21 (Java) · Node 22 + TypeScript + decimal.js · .NET 8 SDK (C#) · Python 3
+#   La verificación de cada destino compila el núcleo generado sin descargar dependencias.
 
 # ---------------------------------------------------------------- etapa 1: interfaz
 FROM node:22-slim AS ui
@@ -35,11 +36,16 @@ COPY docker/certs/*.crt /usr/local/share/ca-certificates/
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gnucobol mono-mcs \
         openjdk-21-jdk-headless maven \
-        nodejs npm \
         dotnet-sdk-8.0 \
         python3 python3-venv git curl ca-certificates \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Node.js 22 (destino TypeScript) desde la imagen oficial: misma versión que compila la UI
+COPY --from=ui /usr/local/bin/node /usr/local/bin/node
+COPY --from=ui /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # uv para gestionar Python rápido
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
@@ -54,8 +60,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN uv venv /opt/venv && UV_SYSTEM_CERTS=true uv pip install --no-cache -r requirements.txt
 
+<<<<<<< Updated upstream
 # TypeScript global para los proyectos destino Node
 RUN NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt npm install -g typescript
+=======
+# Destino TypeScript: compilador y decimal.js globales (la verificación no descarga dependencias)
+RUN npm install -g typescript@5 decimal.js@10
+ENV NODE_PATH=/usr/local/lib/node_modules
+
+# Precalienta .NET (primer uso y paquetes de referencia) para verificar C# sin red durante la demo
+RUN dotnet new console -o /tmp/warm --no-restore >/dev/null && dotnet build /tmp/warm -v q >/dev/null && rm -rf /tmp/warm
+>>>>>>> Stashed changes
 
 # Código del proyecto + interfaz compilada
 COPY . .

@@ -11,8 +11,11 @@ class PackNotAvailable(Exception):
 
 
 def _targets() -> dict[str, TargetAdapter]:
+    from .csharp.adapter import CSharpTarget
+    from .java.adapter import JavaTarget
     from .python.adapter import PythonTarget
-    return {"python": PythonTarget()}
+    from .typescript.adapter import TypeScriptTarget
+    return {"java": JavaTarget(), "csharp": CSharpTarget(), "typescript": TypeScriptTarget(), "python": PythonTarget()}
 
 
 def _sources() -> dict[str, SourceAdapter]:

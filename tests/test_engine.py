@@ -209,7 +209,9 @@ def test_scenario5_end_to_end_service_sanitizes_before_llm(tmp_path):
     assert "app.py" in names and "docs/traceability-matrix.md" in names
 
 
-def test_missing_target_pack_is_explained(tmp_path):
+def test_missing_toolchain_is_explained(tmp_path, monkeypatch):
+    from copilot.languages.java.adapter import JavaTarget
+    monkeypatch.setattr(JavaTarget, "missing_tools", lambda self: ["javac"])
     llm = FakeLLM(base_script(CORRECT))
     engine = Engine(llm, LessonStore(tmp_path / "l.json"), tmp_path)
     svc = CopilotService(store=RunStore(tmp_path / "runs"), mode=RunMode.REAL, background=False,
@@ -220,7 +222,7 @@ def test_missing_target_pack_is_explained(tmp_path):
     from copilot.api.service import ServiceError
     with pytest.raises(ServiceError) as e:
         svc.approve_spec(run.run_id, "qa")
-    assert e.value.code == "TARGET_PACK_MISSING" and "python" in e.value.action
+    assert e.value.code == "TOOLCHAIN_MISSING" and "Docker" in e.value.action
 
 
 def test_engine_failure_marks_phase_with_action(tmp_path):

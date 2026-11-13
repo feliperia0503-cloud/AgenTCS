@@ -115,6 +115,8 @@ class SelfCorrectingLoop:
     config: LoopConfig = field(default_factory=LoopConfig)
     lessons: LessonStore | None = None
     on_attempt: AttemptCallback | None = None
+    framework: str | None = None
+    architecture: str | None = None
 
     def run(self, spec: Spec, cases: list[Case], expected: list[CaseOutput], *,
             oracle_level: OracleLevel, oracle_description: str) -> LoopResult:
@@ -177,7 +179,8 @@ class SelfCorrectingLoop:
         fail = _failure_report(spec, cases, expected, attempt, self.target.info.id, level, desc)
         try:
             files = generate_project(self.llm, spec, self.target, attempt=attempt, previous=files,
-                                     feedback=feedback, lessons=lessons)
+                                     feedback=feedback, lessons=lessons, framework=self.framework,
+                                     architecture=self.architecture)
         except LLMError as exc:
             return files, fail, f"El generador no produjo una respuesta válida: {exc.message}"
         project = self.workdir / f"attempt-{attempt:02d}"

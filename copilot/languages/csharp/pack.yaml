@@ -1,0 +1,5 @@
+id: csharp
+name: C# 12 (.NET 8)
+role: target
+extensions: [".cs"]
+version: 0.1.0

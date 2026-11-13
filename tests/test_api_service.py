@@ -101,8 +101,14 @@ def test_errors_have_actions(svc):
         svc.create_run([("x.bin", b"\x00\x01")], "java", demo_mode=False)
     assert e.value.code == "BINARY_FILE"
     with pytest.raises(ServiceError) as e:
-        svc.create_run([("x.txt", b"hola")], "java", demo_mode=False)
-    assert e.value.code == "LANGUAGE_UNKNOWN"
+        svc.create_run([("x.zip", b"no es un zip")], "java", demo_mode=False)
+    assert e.value.code == "ARCHIVE_INVALID"
+    with pytest.raises(ServiceError) as e:
+        svc.create_run([], "java", demo_mode=False)
+    assert e.value.code == "NO_SOURCE"
+    with pytest.raises(ServiceError) as e:
+        svc.create_run([], "java", framework="django", architecture="hexagonal")
+    assert e.value.code == "TARGET_CONFIG_INVALID"
 
 
 def test_real_mode_upload_is_sanitized_and_paths_stripped(tmp_path):

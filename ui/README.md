@@ -1,9 +1,10 @@
-# AgenTCS — Migration Studio (interfaz de AgenTCS)
+# AgenTCS — Migration Studio (interfaz)
 
-Interfaz del copiloto. React 19 + Vite 8. Diseño en [DESIGN.md](DESIGN.md) y producto en [PRODUCT.md](PRODUCT.md).
+React 19 + Vite 8. Diseño en [DESIGN.md](DESIGN.md) y producto en [PRODUCT.md](PRODUCT.md).
+Todas las pantallas usan datos reales de la API; no hay datos de demostración en el código.
 
 ## Desarrollo
-Requiere la API corriendo en el puerto 8000 (ver README raíz).
+Requiere la API en el puerto 8000 (ver README raíz).
 
 ```bash
 cd ui
@@ -12,20 +13,19 @@ npm run dev     # http://localhost:5173  — /api se redirige a http://localhost
 ```
 Otra URL de API: `AGENTCS_API_URL=http://host:puerto npm run dev`.
 
-## Producción
-`npm run build` genera `dist/`. En Docker, FastAPI sirve `dist/` y `/api` desde el mismo origen (http://localhost:8000).
+## Flujo
+1. **Migración**: código legacy por repositorio Git (GitHub, Bitbucket, GitLab, Azure DevOps…) o archivos /
+   comprimidos (.zip, .tar.gz), en cualquier lenguaje. "Sugerir configuración" analiza el código con IA.
+   Lenguaje, framework y arquitectura destino vienen del catálogo de la API (`/api/catalog`); los destinos
+   sin herramientas en el equipo se marcan "requiere Docker".
+2. **Iniciar migración** crea la ejecución (`POST /api/runs`) y la interfaz consulta su estado cada 2,5 s.
+3. **Reglas de negocio**: aprobar, ajustar o rechazar cada regla con su evidencia; comentario obligatorio si
+   la confianza es baja. "Aprobar especificación y generar" lanza la generación y verificación.
+4. **Pruebas y código**: equivalencia, similitud, intentos de autocorrección, diferencias, código generado y
+   descarga del paquete.
 
-## Conexión con la API
-- `src/api/client.js`: llamadas a la API (crear ejecución, consultar estado, decidir reglas, aprobar, verificación, paquete). Los errores traen `code`, `message` y `action` (acción sugerida para el usuario).
-- `src/api/adapters.js`: convierte los contratos (`Rule`, `VerificationReport`, `RunState`) a la forma que ya usan las vistas (`demoRules`, `testRows`, progreso de la ruta).
+## Módulos
+- `src/api/client.js`: llamadas a la API. Los errores traen `code`, `message` y `action`.
+- `src/api/adapters.js`: convierte `Rule` del contrato a la forma de las vistas.
 
-## Pendiente para reemplazar el modo maqueta (rol C)
-1. `startMigration` → `api.createRun(...)` y sondear `api.getRun(id)` para el progreso real (`toRouteProgress`).
-2. `demoRules` → `run.spec.rules.map(toUiRule)`; botones aprobar / ajustar / rechazar → `api.decideRule`.
-3. Botón para aprobar la especificación → `api.approveSpec`.
-4. `testRows` → `toUiTestRows(run.verification)`, mostrar nivel de oráculo y diferencias.
-5. Carga de archivos legacy (además de la URL del repositorio).
-6. Vista lado a lado: `run.files` (legacy sanitizado) ↔ regla ↔ `run.generated_files`.
-7. Enmascaramiento visible (`run.sanitization`) y descarga del paquete (`api.packageUrl`).
-
-El inicio de sesión es demostrativo; no se usan credenciales reales.
+El acceso es local: el correo solo identifica al revisor de las reglas (trazabilidad del HITL).

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from copilot.contracts import CaseOutput, Phase, RunState, VerificationReport
+from copilot.contracts import AnalysisResult, CaseOutput, Phase, RunState, SourceFile, VerificationReport
 from copilot.languages.registry import get_source, get_target
 
 from .extractor import extract_spec
@@ -19,6 +19,33 @@ from .segmenter import segment
 from .test_generator import generate_cases
 
 Save = Callable[[RunState], None]
+EXTRACTION_BUDGET = int(os.environ.get("AGENTCS_EXTRACTION_CHARS", "120000"))
+
+
+def _program_name(state: RunState) -> str:
+    ref = (state.source_ref or "").rstrip("/").split("/")[-1].removesuffix(".git")
+    for suffix in (".zip", ".tar.gz", ".tgz", ".tar"):
+        ref = ref.removesuffix(suffix)
+    return (ref or Path(state.files[0].path).stem).upper()
+
+
+def select_for_extraction(files: list[SourceFile], analysis: AnalysisResult) -> tuple[list[SourceFile], str | None]:
+    """Si el código supera el presupuesto, prioriza los archivos con más lógica (complejidad por unidad)."""
+    total = sum(len(f.content) for f in files)
+    if total <= EXTRACTION_BUDGET:
+        return files, None
+    weight: dict[str, int] = {}
+    for u in analysis.units:
+        weight[u.file] = weight.get(u.file, 0) + u.complexity
+    ranked = sorted(files, key=lambda f: (-weight.get(f.path, 0) / max(len(f.content), 1) * 1000, f.path))
+    chosen, used = [], 0
+    for f in ranked:
+        if used + len(f.content) <= EXTRACTION_BUDGET or not chosen:
+            chosen.append(f)
+            used += len(f.content)
+    note = (f"Se analizaron {len(chosen)} de {len(files)} archivos (los de mayor densidad de lógica) por el "
+            f"presupuesto de contexto; el resto queda pendiente para una siguiente iteración.")
+    return chosen, note
 
 
 @dataclass
@@ -48,8 +75,11 @@ class Engine:
                      message="; ".join(problems) or f"{analysis.metrics.units} unidades inventariadas con {how}")
         state.start(Phase.EXTRACCION)
         save(state)
-        spec = extract_spec(self.llm, state.files, analysis, program=Path(state.files[0].path).stem.upper(),
+        selected, note = select_for_extraction(state.files, analysis)
+        spec = extract_spec(self.llm, selected, analysis, program=_program_name(state),
                             knowledge=source.knowledge() if source else "", domain=state.domain)
+        if note:
+            spec = spec.model_copy(update={"assumptions": [note, *spec.assumptions]})
         state.update_spec(spec)
         dropped = sum(a.startswith("Regla descartada") for a in spec.assumptions)
         state.finish(Phase.EXTRACCION, ok=bool(spec.rules),
@@ -67,8 +97,10 @@ class Engine:
         target = get_target(state.target_language)
         run_dir = self.output_root / "runs" / state.run_id
         state.start(Phase.DISENO)
-        state.design = {"target": target.info.name, "style": "arquitectura limpia según convenciones del pack destino"}
-        state.finish(Phase.DISENO, ok=True, message=f"Convenciones de {target.info.name} aplicadas")
+        state.design = {"target": target.info.name, "framework": state.target_framework,
+                        "architecture": state.target_architecture}
+        state.finish(Phase.DISENO, ok=True, message=f"{target.info.name} · {state.target_framework or 'núcleo puro'} · "
+                                                    f"{state.target_architecture or 'hexagonal'}")
 
         state.start(Phase.GENERACION)
         state.start(Phase.VERIFICACION)
@@ -93,7 +125,8 @@ class Engine:
                 f"{rec.passed}/{rec.total} casos · similitud {rec.similarity:.2f}")
             save(state)
 
-        loop = SelfCorrectingLoop(self.llm, target, run_dir / "attempts", self.config, self.lessons, on_attempt)
+        loop = SelfCorrectingLoop(self.llm, target, run_dir / "attempts", self.config, self.lessons, on_attempt,
+                                  framework=state.target_framework, architecture=state.target_architecture)
         result = loop.run(state.spec, state.cases, state.expected,
                           oracle_level=oracle.level, oracle_description=oracle.description)
         self._finish(state, result, reports)

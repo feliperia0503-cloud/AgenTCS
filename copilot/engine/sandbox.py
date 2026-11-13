@@ -3,6 +3,7 @@ salida truncada. Nunca escribe ni ejecuta fuera del workdir."""
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -50,9 +51,17 @@ def write_files(root: Path, files: dict[str, str]) -> None:
         path.write_text(content, encoding="utf-8")
 
 
-def run_cmd(args: list[str], cwd: Path, timeout: float = DEFAULT_TIMEOUT) -> ProcResult:
+def resolve(executable: str) -> str | None:
+    """Ruta completa del ejecutable (en Windows resuelve también .cmd/.exe, p. ej. tsc.cmd)."""
+    return shutil.which(executable)
+
+
+def run_cmd(args: list[str], cwd: Path, timeout: float = DEFAULT_TIMEOUT,
+            extra_env: dict[str, str] | None = None) -> ProcResult:
     env = {k: v for k, v in os.environ.items() if k not in {"ANTHROPIC_API_KEY", "ORACLE_PASSWORD"}}
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env.update({"PYTHONDONTWRITEBYTECODE": "1", "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"})
+    env.update(extra_env or {})
+    args = [resolve(args[0]) or args[0], *args[1:]]
     try:
         p = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=timeout,
                            env=env, shell=False, check=False)

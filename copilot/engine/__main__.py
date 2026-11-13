@@ -11,6 +11,12 @@ import argparse
 import sys
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from copilot.api.service import CopilotService, ServiceError
 from copilot.contracts import Phase, PhaseStatus, RunMode, RunState
 
@@ -41,7 +47,8 @@ def migrate(args: argparse.Namespace) -> int:
     service = CopilotService(mode=RunMode.REAL, background=False,
                              engine_factory=lambda: Engine.from_env(config))
     payload = [(Path(p).name, Path(p).read_bytes()) for p in args.source]
-    state = service.create_run(payload, args.target, args.source_language, args.domain, demo_mode=False)
+    state = service.create_run(payload, args.target, args.source_language, args.domain, demo_mode=False,
+                               framework=args.framework or "none", architecture=args.architecture)
     print(f"Ejecución {state.run_id} · {state.source_language} → {state.target_language}")
     if state.phases[Phase.EXTRACCION].status != PhaseStatus.APROBADA:
         _print_phases(state)
@@ -69,7 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     m = sub.add_parser("migrate", help="Migra código legacy con el bucle de autocorrección")
     m.add_argument("--source", nargs="+", required=True, help="Archivos legacy")
-    m.add_argument("--target", default="python", help="Pack de destino (por ahora: python)")
+    m.add_argument("--target", default="java", help="Destino: java, csharp, typescript o python")
+    m.add_argument("--framework", default=None, help="Framework del catálogo (spring, aspnet, nestjs, fastapi, none…)")
+    m.add_argument("--architecture", default="hexagonal", help="hexagonal, clean, modular, microservices, event-driven")
     m.add_argument("--source-language", default=None, help="Lenguaje origen (si no, se detecta por extensión)")
     m.add_argument("--domain", default=None)
     m.add_argument("--max-attempts", type=int, default=5)

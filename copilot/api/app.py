@@ -6,6 +6,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+try:   # carga ANTHROPIC_API_KEY y demás variables desde .env al correr con uvicorn local
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -55,16 +61,36 @@ def languages() -> dict:
     return service.languages()
 
 
+@app.get("/api/catalog")
+def catalog() -> dict:
+    return service.catalog()
+
+
 @app.post("/api/runs", response_model=RunState)
 async def create_run(
     target_language: str = Form(...),
+    target_framework: str | None = Form(None),
+    target_architecture: str | None = Form(None),
     source_language: str | None = Form(None),
     domain: str | None = Form(None),
+    repo_url: str | None = Form(None),
+    branch: str | None = Form(None),
     demo: bool | None = Form(None),
     files: list[UploadFile] = File(default=[]),
 ) -> RunState:
     payload = [(f.filename or "archivo", await f.read()) for f in files]
-    return service.create_run(payload, target_language, source_language, domain, demo)
+    return service.create_run(payload, target_language, source_language, domain, demo, repo_url=repo_url,
+                              branch=branch, framework=target_framework, architecture=target_architecture)
+
+
+@app.post("/api/suggest")
+async def suggest_target(
+    repo_url: str | None = Form(None),
+    branch: str | None = Form(None),
+    files: list[UploadFile] = File(default=[]),
+) -> dict:
+    payload = [(f.filename or "archivo", await f.read()) for f in files]
+    return service.suggest_target(payload, repo_url, branch)
 
 
 @app.get("/api/runs/{run_id}", response_model=RunState)
