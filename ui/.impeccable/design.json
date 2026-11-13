@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T10:31:52.6697817-05:00",
+  "title": "Design System: AgenTCS Migration Studio",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta técnica",
+        "canonical": "#172535",
+        "tonalRamp": ["oklch(15% 0.035 250)", "oklch(26% 0.04 250)", "oklch(38% 0.035 250)", "oklch(50% 0.028 250)", "oklch(63% 0.022 250)", "oklch(75% 0.016 250)", "oklch(86% 0.01 250)", "oklch(95% 0.005 250)"]
+      },
+      "navy": {
+        "role": "neutral",
+        "displayName": "Azul noche estructural",
+        "canonical": "#10253f",
+        "tonalRamp": ["oklch(15% 0.055 252)", "oklch(26% 0.065 252)", "oklch(38% 0.06 252)", "oklch(50% 0.05 252)", "oklch(63% 0.04 252)", "oklch(75% 0.028 252)", "oklch(86% 0.016 252)", "oklch(95% 0.007 252)"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel operativo",
+        "canonical": "#fbfcf8",
+        "tonalRamp": ["oklch(15% 0.018 110)", "oklch(26% 0.02 110)", "oklch(38% 0.018 110)", "oklch(50% 0.015 110)", "oklch(63% 0.012 110)", "oklch(75% 0.009 110)", "oklch(86% 0.006 110)", "oklch(95% 0.004 110)"]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Suelo cálido",
+        "canonical": "#f2f3ef",
+        "tonalRamp": ["oklch(15% 0.016 110)", "oklch(26% 0.018 110)", "oklch(38% 0.017 110)", "oklch(50% 0.014 110)", "oklch(63% 0.011 110)", "oklch(75% 0.008 110)", "oklch(86% 0.006 110)", "oklch(95% 0.004 110)"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Línea silenciosa",
+        "canonical": "#d9ddd8",
+        "tonalRamp": ["oklch(15% 0.012 145)", "oklch(26% 0.014 145)", "oklch(38% 0.013 145)", "oklch(50% 0.011 145)", "oklch(63% 0.009 145)", "oklch(75% 0.007 145)", "oklch(86% 0.005 145)", "oklch(95% 0.003 145)"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Pizarra secundaria",
+        "canonical": "#617080",
+        "tonalRamp": ["oklch(15% 0.025 245)", "oklch(26% 0.03 245)", "oklch(38% 0.028 245)", "oklch(50% 0.024 245)", "oklch(63% 0.019 245)", "oklch(75% 0.014 245)", "oklch(86% 0.009 245)", "oklch(95% 0.004 245)"]
+      },
+      "teal": {
+        "role": "primary",
+        "displayName": "Teal operativo",
+        "canonical": "#0c7b76",
+        "tonalRamp": ["oklch(15% 0.055 188)", "oklch(26% 0.075 188)", "oklch(38% 0.09 188)", "oklch(50% 0.095 188)", "oklch(63% 0.08 188)", "oklch(75% 0.055 188)", "oklch(86% 0.03 188)", "oklch(95% 0.012 188)"]
+      },
+      "teal-dark": {
+        "role": "primary",
+        "displayName": "Teal profundo",
+        "canonical": "#075f5b",
+        "tonalRamp": ["oklch(15% 0.05 188)", "oklch(26% 0.07 188)", "oklch(38% 0.082 188)", "oklch(50% 0.085 188)", "oklch(63% 0.07 188)", "oklch(75% 0.048 188)", "oklch(86% 0.027 188)", "oklch(95% 0.011 188)"]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Ámbar de tránsito",
+        "canonical": "#d89b31",
+        "tonalRamp": ["oklch(15% 0.06 72)", "oklch(26% 0.09 72)", "oklch(38% 0.12 72)", "oklch(50% 0.14 72)", "oklch(63% 0.13 72)", "oklch(75% 0.095 72)", "oklch(86% 0.052 72)", "oklch(95% 0.018 72)"]
+      },
+      "focus": {
+        "role": "secondary",
+        "displayName": "Ámbar de foco",
+        "canonical": "#e8ad42",
+        "tonalRamp": ["oklch(15% 0.055 75)", "oklch(26% 0.085 75)", "oklch(38% 0.115 75)", "oklch(50% 0.135 75)", "oklch(63% 0.125 75)", "oklch(75% 0.09 75)", "oklch(86% 0.05 75)", "oklch(95% 0.017 75)"]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Blanco de control",
+        "canonical": "#ffffff",
+        "tonalRamp": ["oklch(15% 0 0)", "oklch(26% 0 0)", "oklch(38% 0 0)", "oklch(50% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(86% 0 0)", "oklch(95% 0 0)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Proyectos y métricas dominantes sobre paneles azul noche." },
+      "headline": { "displayName": "Headline", "purpose": "Encabezados principales de vistas operativas." },
+      "title": { "displayName": "Title", "purpose": "Títulos de paneles, secciones e inspectores." },
+      "body": { "displayName": "Body", "purpose": "Descripción, formularios, tablas y evidencia." },
+      "label": { "displayName": "Label", "purpose": "Controles, navegación, estados y metadatos compactos." }
+    },
+    "shadows": [
+      { "name": "panel-ambient", "value": "0 8px 30px rgba(26,43,55,.07)", "purpose": "Separa contenedores de trabajo del suelo cálido." },
+      { "name": "primary-action", "value": "0 7px 16px rgba(5,75,72,.2)", "purpose": "Da presencia contenida a la acción teal primaria." },
+      { "name": "mobile-drawer", "value": "20px 0 40px rgba(5,20,32,.2)", "purpose": "Distingue la navegación fuera de lienzo del contenido." }
+    ],
+    "motion": [
+      { "name": "route-progress", "value": "width .5s cubic-bezier(.16,1,.3,1)", "purpose": "Avance visible de la línea de migración." },
+      { "name": "drawer", "value": "transform .25s cubic-bezier(.16,1,.3,1)", "purpose": "Entrada y salida de la navegación móvil." },
+      { "name": "continuity-reveal", "value": "routeReveal 1.5s cubic-bezier(.16,1,.3,1) both", "purpose": "Revela la continuidad legacy a objetivo en el acceso." },
+      { "name": "spinner", "value": "spin .7s linear infinite", "purpose": "Comunica espera breve en acciones asíncronas." }
+    ],
+    "breakpoints": [
+      { "name": "compressed", "value": "1120px" },
+      { "name": "mobile", "value": "800px" },
+      { "name": "compact-mobile", "value": "440px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal para iniciar o continuar una operación.",
+      "html": "<button class=\"ds-btn-primary\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7V5Z\"/></svg>Iniciar migración</button>",
+      "css": ".ds-btn-primary { min-height:44px; border:0; border-radius:10px; padding:0 17px; display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--teal, #0c7b76); color:#fff; font:750 12px/1.2 Aptos, 'Segoe UI', sans-serif; box-shadow:0 7px 16px rgba(5,75,72,.2); cursor:pointer; } .ds-btn-primary svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-btn-primary:hover { background:var(--teal-dark, #075f5b); } .ds-btn-primary:focus-visible { outline:3px solid var(--focus, #e8ad42); outline-offset:3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción complementaria que conserva el protagonismo de la operación principal.",
+      "html": "<button class=\"ds-btn-secondary\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3Z\"/><path d=\"m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z\"/></svg>Generar sugerencia</button>",
+      "css": ".ds-btn-secondary { min-height:44px; border:1px solid #cbd2cf; border-radius:10px; padding:0 17px; display:inline-flex; align-items:center; justify-content:center; gap:9px; background:#fff; color:var(--ink, #172535); font:750 12px/1.2 Aptos, 'Segoe UI', sans-serif; cursor:pointer; } .ds-btn-secondary svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-btn-secondary:hover { background:#f5f7f4; border-color:#9ca9a5; } .ds-btn-secondary:focus-visible { outline:3px solid var(--focus, #e8ad42); outline-offset:3px; }"
+    },
+    {
+      "name": "Repository Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo operativo de 46px para repositorios, búsquedas y datos del flujo.",
+      "html": "<label class=\"ds-field\">Repositorio Git<span class=\"ds-input-wrap\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"5\" r=\"2\"/><circle cx=\"18\" cy=\"6\" r=\"2\"/><circle cx=\"6\" cy=\"19\" r=\"2\"/><path d=\"M6 7v10M8 6h4a4 4 0 0 1 4 4v4.2\"/></svg><input value=\"https://git.demo.local/core-banking/transfers-legacy\" aria-label=\"Repositorio Git\" /></span></label>",
+      "css": ".ds-field { display:grid; gap:8px; color:var(--ink, #172535); font:700 12px/1.2 Aptos, 'Segoe UI', sans-serif; } .ds-input-wrap { position:relative; display:block; } .ds-input-wrap svg { position:absolute; left:13px; top:13px; width:20px; height:20px; fill:none; stroke:#607080; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; } .ds-input-wrap input { width:100%; min-height:46px; padding:0 14px 0 43px; border:1px solid #bcc5c2; border-radius:10px; background:#fff; color:var(--ink, #172535); caret-color:var(--teal, #0c7b76); font:400 14px/1.55 Aptos, 'Segoe UI', sans-serif; } .ds-input-wrap input:hover { border-color:#879792; } .ds-input-wrap input:focus { outline:3px solid rgba(12,123,118,.18); border-color:var(--teal, #0c7b76); } .ds-input-wrap input:focus-visible { outline:3px solid var(--focus, #e8ad42); outline-offset:3px; }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-item-active",
+      "description": "Ítem activo de la navegación lateral sobre el shell azul noche.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Navegación de ejemplo\"><button class=\"ds-nav-item ds-active\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"5\" cy=\"6\" r=\"2\"/><circle cx=\"19\" cy=\"18\" r=\"2\"/><path d=\"M7 6h3.5A3.5 3.5 0 0 1 14 9.5v5a3.5 3.5 0 0 0 3.5 3.5H17\"/></svg><span>Migración</span></button></nav>",
+      "css": ".ds-nav { width:230px; padding:8px; background:var(--navy, #10253f); } .ds-nav-item { width:100%; min-height:44px; border:0; border-radius:10px; padding:0 12px; display:flex; align-items:center; gap:12px; background:transparent; color:#b8c7d2; font:600 13px/1.2 Aptos, 'Segoe UI', sans-serif; text-align:left; cursor:pointer; } .ds-nav-item svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-nav-item:hover { background:#17344f; color:#fff; } .ds-nav-item.ds-active { background:#1e405d; color:#fff; } .ds-nav-item.ds-active svg { color:var(--amber, #d89b31); } .ds-nav-item:focus-visible { outline:3px solid var(--focus, #e8ad42); outline-offset:3px; }"
+    },
+    {
+      "name": "Status Labels",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Etiquetas textuales para severidad y resultado; el significado nunca depende solo del color.",
+      "html": "<div class=\"ds-status-set\"><span class=\"ds-status ds-success\">Correcto</span><span class=\"ds-status ds-warning\">Revisar</span><span class=\"ds-status ds-critical\">Crítica</span><span class=\"ds-status ds-medium\">Media</span></div>",
+      "css": ".ds-status-set { display:flex; flex-wrap:wrap; gap:8px; align-items:center; } .ds-status { width:max-content; padding:5px 8px; border-radius:999px; font:800 10px/1.2 Aptos, 'Segoe UI', sans-serif; } .ds-success { color:#1d6549; background:#dcefe5; } .ds-warning { color:#7d4500; background:#f8e5bc; } .ds-critical { color:#842f2a; background:#f4d7d4; } .ds-medium { color:#385068; background:#dde7f0; }"
+    },
+    {
+      "name": "Surface Container",
+      "kind": "card",
+      "refersTo": "surface-container",
+      "description": "Contenedor de trabajo de papel cálido para formularios, tablas e inspectores.",
+      "html": "<section class=\"ds-surface\"><h3>Sistema de origen</h3><p>AgenTCS analizará la estructura sin modificar el repositorio.</p></section>",
+      "css": ".ds-surface { max-width:520px; padding:28px; border-radius:14px; background:var(--paper, #fbfcf8); color:var(--ink, #172535); box-shadow:0 8px 30px rgba(26,43,55,.07); font-family:Aptos, 'Segoe UI', sans-serif; } .ds-surface h3 { margin:0 0 5px; font:700 1.2rem/1.2 Manrope, sans-serif; letter-spacing:-.02em; } .ds-surface p { margin:0; max-width:68ch; color:var(--muted, #617080); font-size:13px; line-height:1.55; }"
+    },
+    {
+      "name": "Migration Route",
+      "kind": "custom",
+      "refersTo": "migration-route",
+      "description": "Firma visual de cinco estaciones nombradas que preserva progreso y estado en responsive.",
+      "html": "<div class=\"ds-route\" role=\"progressbar\" aria-label=\"Progreso de la migración\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"48\"><div class=\"ds-route-line\"></div><div class=\"ds-route-progress\"></div><div class=\"ds-stop ds-first ds-reached\"><span>✓</span><b>Repositorio<small>Conectado</small></b></div><div class=\"ds-stop ds-reached\"><span>✓</span><b>Extracción<small>42 reglas</small></b></div><div class=\"ds-stop\"><span>3</span><b>Validación<small>En curso</small></b></div><div class=\"ds-stop\"><span>4</span><b>Generación<small>Pendiente</small></b></div><div class=\"ds-stop ds-last\"><span>5</span><b>Pruebas<small>Pendiente</small></b></div></div>",
+      "css": ".ds-route { min-width:760px; display:grid; grid-template-columns:repeat(5,1fr); position:relative; overflow:hidden; padding:22px 24px; border-radius:14px; background:var(--navy, #10253f); color:#fff; font-family:Aptos, 'Segoe UI', sans-serif; } .ds-route-line,.ds-route-progress { position:absolute; left:8%; top:35px; height:2px; } .ds-route-line { right:8%; background:#39536b; } .ds-route-progress { width:40.32%; background:var(--amber, #d89b31); transition:width .5s cubic-bezier(.16,1,.3,1); } .ds-stop { display:flex; align-items:center; justify-content:center; gap:10px; position:relative; z-index:1; } .ds-stop.ds-first { justify-content:flex-start; } .ds-stop.ds-last { justify-content:flex-end; } .ds-stop > span { width:28px; height:28px; flex:0 0 auto; display:grid; place-items:center; border:2px solid #60778b; border-radius:50%; background:var(--navy, #10253f); font-size:11px; font-weight:800; } .ds-stop.ds-reached > span { border-color:var(--amber, #d89b31); background:#263f58; } .ds-stop b { display:grid; gap:2px; font-size:12px; } .ds-stop small { color:#91a6b7; font-size:10px; font-weight:400; } .ds-stop.ds-reached small { color:#e7c989; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La ruta verificable",
+    "overview": "AgenTCS se siente como una sala de operaciones empresarial: concentrada, precisa y legible, con la suficiente calidez para evitar una interfaz clínica. El shell azul noche contiene el trabajo; las superficies cálidas ordenan información densa; y la jerarquía tipográfica separa decisiones, evidencia y estado sin añadir ruido.\n\nLa identidad aparece en una sola idea persistente: cada migración es una ruta trazable que avanza por estaciones nombradas. El sistema privilegia convenciones conocidas, control humano y estados explícitos; el color refuerza la acción y la evidencia, nunca las sustituye.",
+    "keyCharacteristics": [
+      "Azul noche estructural sobre un fondo cálido y superficies de papel.",
+      "Teal reservado a acciones, selección y confirmación operativa.",
+      "Ámbar reservado al recorrido y al foco visible.",
+      "Densidad precisa, radios moderados y jerarquía compacta.",
+      "Estados expresados con texto, posición e iconografía además de color."
+    ],
+    "rules": [
+      { "name": "The Action and Evidence Rule", "body": "El teal hace; el ámbar narra el recorrido. No intercambies sus funciones.", "section": "colors" },
+      { "name": "The Two Voices Rule", "body": "Usa Manrope para orientación y decisión; usa Aptos/Segoe UI para operación, lectura y datos.", "section": "typography" },
+      { "name": "The Ground Before Shadow Rule", "body": "Resuelve primero la jerarquía con fondo, borde y espaciado; reserva la sombra para superficies operativas completas o estados temporales.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do conserva teal para acciones, selección y confirmación operativa.",
+      "Do conserva ámbar para la ruta de migración y el foco visible.",
+      "Do expresa severidad y resultado con texto además de color.",
+      "Do mantiene visibles los cinco nombres y estados de la ruta en todos los tamaños.",
+      "Do identifica los datos sintéticos con una etiqueta explícita de demostración."
+    ],
+    "donts": [
+      "Don't conviertas ámbar en un segundo color de botón primario.",
+      "Don't uses sombras en cada bloque; la profundidad pertenece a superficies operativas completas.",
+      "Don't ocultes etapas de la ruta para resolver el responsive.",
+      "Don't uses Manrope para párrafos, tablas o formularios densos.",
+      "Don't suavices la interfaz con radios mayores a los paneles existentes sin una razón funcional."
+    ]
+  }
+}

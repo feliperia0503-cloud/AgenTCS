@@ -1,15 +1,27 @@
 # AgenTCS — imagen única: desarrollo, verificación y demo.
-# Agnóstica de lenguaje: runtimes de ORIGEN para ejecutar el legacy (oráculo nivel A) y de DESTINO
-# para compilar/probar el código generado. En el computador solo se necesita Docker.
+# Etapa 1 compila la interfaz (AgenTCS, React + Vite). Etapa 2 contiene la API (FastAPI), el núcleo
+# agnóstico y los runtimes de ORIGEN (ejecutar el legacy, oráculo nivel A) y de DESTINO
+# (compilar/probar el código generado). En el computador solo se necesita Docker.
 #   Origen:  GnuCOBOL (COBOL) · Mono (C#/.NET Framework) · JDK (Java legacy) · PL/SQL -> servicio 'oracle' en compose
 #   Destino: JDK 21 + Maven (Java) · Node + npm (TypeScript) · .NET 8 SDK (C#) · Python 3 (Python)
-# Para agregar un lenguaje: sumar su runtime aquí (o como servicio con profile si es pesado).
+
+# ---------------------------------------------------------------- etapa 1: interfaz
+FROM node:22-slim AS ui
+WORKDIR /ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci
+COPY ui/ ./
+RUN npm run build
+
+# ---------------------------------------------------------------- etapa 2: API + runtimes
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     VIRTUAL_ENV=/opt/venv \
-    PATH=/opt/venv/bin:$PATH
+    PATH=/opt/venv/bin:$PATH \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    AGENTCS_OUTPUT=/app/output
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gnucobol mono-mcs \
@@ -35,10 +47,9 @@ RUN uv venv /opt/venv && uv pip install --no-cache -r requirements.txt
 # TypeScript global para los proyectos destino Node
 RUN npm install -g typescript
 
-ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
-
-# Código del proyecto
+# Código del proyecto + interfaz compilada
 COPY . .
+COPY --from=ui /ui/dist /app/ui/dist
 
 # Pre-descarga de dependencias de las plantillas de destino (si existen) para compilar el
 # código generado SIN internet durante la demo.
@@ -49,5 +60,5 @@ RUN if [ -f copilot/languages/java/templates/pom.xml ]; then \
  && if ls copilot/languages/csharp/templates/*.sln >/dev/null 2>&1; then \
       dotnet restore copilot/languages/csharp/templates; fi
 
-EXPOSE 8501
-CMD ["streamlit", "run", "ui/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+EXPOSE 8000
+CMD ["uvicorn", "copilot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

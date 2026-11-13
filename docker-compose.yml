@@ -1,15 +1,16 @@
-# Demo y ejecución con un solo comando:  docker compose up --build
+# Demo y ejecución con un solo comando:  docker compose up --build   ->  http://localhost:8000
 # Con PL/SQL como lenguaje origen (oráculo nivel A):  docker compose --profile oracle up --build
 services:
   copilot:
     build: .
     image: agentcs/copilot:latest
     ports:
-      - "8501:8501"
+      - "8000:8000"
     env_file:
       - path: .env
-        required: false   # sin .env arranca en modo replay (respuestas cacheadas)
+        required: false   # sin .env: modo demo (sin LLM)
     environment:
+      AGENTCS_MODE: ${AGENTCS_MODE:-demo}   # demo | real
       ORACLE_DSN: oracle:1521/FREEPDB1
     volumes:
       - ./output:/app/output   # el paquete de migración generado queda en tu carpeta

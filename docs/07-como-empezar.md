@@ -1,17 +1,17 @@
 # 07 · Cómo empezamos a construir
 
 ## Paso 0 · Instalar lo mínimo (solo la máquina de desarrollo)
-1. Descomprimir `AgenTCS.zip` en `C:\` → `C:\AgenTCS`.
+1. Clonar el repositorio en `C:\source\AgenTCS`.
 2. PowerShell como administrador: `.\scripts\setup-windows.ps1` (Git, Docker Desktop, VS Code + Dev Containers) → reiniciar.
 3. Abrir Docker Desktop y dejarlo corriendo.
 4. Copiar `.env.example` a `.env` y poner la `ANTHROPIC_API_KEY`.
 
 ## Paso 1 · Abrir el proyecto en el contenedor
-1. VS Code → abrir `C:\AgenTCS` → "Reopen in Container" (la primera vez construye la imagen; tarda unos minutos).
+1. VS Code → abrir `C:\source\AgenTCS` → "Reopen in Container" (la primera vez construye la imagen; tarda unos minutos).
 2. Ya dentro, en la terminal de VS Code: `cobc --version`, `java -version`, `mvn -v` → todo viene del contenedor.
-3. `git init && git add . && git commit -m "chore: estructura inicial"`.
-4. `claude` → comprobar con `/skills` que cargaron las 6 skills del proyecto.
-5. Prueba de humo de la demo: desde PowerShell en `C:\AgenTCS`, `docker compose up --build` → abrir http://localhost:8501 (muestra las herramientas detectadas).
+3. `pytest -q` → deben pasar todas las pruebas del núcleo y de la API.
+4. `claude` → comprobar con `/skills` que cargaron las 9 skills del proyecto.
+5. Prueba de humo de la demo: desde PowerShell en `C:\source\AgenTCS`, `docker compose up --build` → abrir http://localhost:8000 (AgenTCS en modo demo).
 
 ## Paso 2 · Tres personas, una máquina
 Varias terminales dentro del Dev Container, cada una con su worktree y su sesión de Claude Code:
@@ -46,11 +46,12 @@ En `copilot/contracts/` (Pydantic + Protocols), siguiendo la skill `language-ada
 > Sigue cobol-semantics y golden-master-testing.
 
 **C · Experiencia**
-> Reemplaza `ui/app.py` por un wizard Streamlit de 8 fases: selector de lenguaje origen (autodetectado,
-> editable) y destino (de los packs disponibles), estado por fase, vista lado a lado legacy / regla /
-> código nuevo con líneas resaltadas, aprobación de reglas (comentario obligatorio si confianza < 0,7),
-> nivel de oráculo visible y tablero de resultados. Usa datos falsos que cumplan `copilot/contracts/`.
-> Aplica frontend-design.
+> En `ui/` (AgenTCS), reemplaza los datos de maqueta por la API usando `src/api/client.js` y
+> `src/api/adapters.js`, siguiendo la lista "Pendiente" de `ui/README.md`: crear ejecución y sondear su
+> estado, reglas desde `run.spec.rules` con aprobar/ajustar/rechazar (comentario obligatorio si confianza
+> < 0,7), aprobar la especificación, pruebas desde `run.verification` con nivel de oráculo y diferencias,
+> carga de archivos, vista lado a lado legacy/regla/código nuevo, enmascaramiento visible y descarga del
+> paquete. Respeta DESIGN.md. La API corre en modo demo, así que todo el flujo funciona desde ya.
 
 ## Paso 5 · Hitos
 **Hito 1:** COBOL → Java de punta a punta con 100% de equivalencia (oráculo A).

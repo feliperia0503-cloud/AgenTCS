@@ -55,12 +55,19 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+class RunMode(StrEnum):
+    DEMO = "demo"    # datos sintéticos precalculados (UI y ensayo de la demo)
+    REAL = "real"    # pipeline real (adaptadores + LLM + verificación)
+
+
 class RunState(BaseModel):
     run_id: str
+    mode: RunMode = RunMode.REAL
     source_language: str | None = None    # None => autodetectar
     target_language: str
     domain: str | None = None
     created_at: datetime = Field(default_factory=_now)
+    approved_by: str | None = None        # quién aprobó la especificación completa (HITL)
 
     files: list[SourceFile] = []
     sanitization: list[SanitizationFinding] = []
@@ -69,10 +76,12 @@ class RunState(BaseModel):
     spec_history: list[Spec] = []         # versiones previas (trazabilidad del HITL)
     design: dict[str, Any] = {}           # modelo de dominio, OpenAPI, ADRs (rutas)
     project_path: str | None = None
+    generated_files: dict[str, str] = {}  # ruta relativa -> contenido (vista lado a lado en la UI)
     cases: list[Case] = []
     expected: list[CaseOutput] = []
     actual: list[CaseOutput] = []
     verification: VerificationReport | None = None
+    verification_history: list[VerificationReport] = []  # intentos previos (autocorrección)
     generation_attempts: int = 0
     max_attempts: int = 3
 
@@ -94,6 +103,11 @@ class RunState(BaseModel):
         rec = self.phases[phase]
         rec.status = PhaseStatus.ESPERANDO_HUMANO
         rec.gate_message = message
+
+    def set_verification(self, report: VerificationReport) -> None:
+        if self.verification is not None:
+            self.verification_history.append(self.verification)
+        self.verification = report
 
     def update_spec(self, new: Spec) -> None:
         if self.spec is not None:

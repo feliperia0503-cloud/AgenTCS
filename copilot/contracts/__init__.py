@@ -17,7 +17,7 @@ from .spec import (
     LOW_CONFIDENCE, DataField, Entity, ErrorCode, IOContract, Review, Rule, RuleCategory,
     RuleStatus, SourceRef, Spec,
 )
-from .state import LLMCall, Phase, PhaseRecord, PhaseStatus, RunState
+from .state import LLMCall, Phase, PhaseRecord, PhaseStatus, RunMode, RunState
 from .types import NeutralType, Rounding, TypeKind, decimal_str
 from .verification import (
     Case, CaseError, CaseOutput, Difference, OracleLevel, VerificationReport,

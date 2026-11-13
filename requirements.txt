@@ -4,7 +4,6 @@ langchain-anthropic
 pydantic
 python-dotenv
 pyyaml
-streamlit
 tree-sitter
 tree-sitter-language-pack
 oracledb
@@ -13,3 +12,7 @@ networkx
 jinja2
 pytest
 semgrep
+fastapi
+uvicorn[standard]
+python-multipart
+httpx

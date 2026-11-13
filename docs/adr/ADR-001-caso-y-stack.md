@@ -13,7 +13,7 @@ demostrada y limita los criterios 3–7 a 3/5 si esta falla. Somos 3 personas co
 3. **Orquestación:** Python + LangGraph (estado persistente e interrupciones nativas para HITL).
 4. **LLM:** Claude vía API, con salidas estructuradas (JSON schema).
 5. **Verificación:** GnuCOBOL ejecuta el original para obtener el golden master; Maven + JUnit 5 para el destino.
-6. **UI:** Streamlit (rapidez) — reevaluar a React + FastAPI si el equipo tiene capacidad.
+6. **UI:** ~~Streamlit~~ → reemplazado por AgenTCS (React + Vite) + FastAPI, ver ADR-004.
 
 ## Alternativas consideradas
 - PL/SQL como caso principal: requiere Oracle en contenedor (pesado); queda como extensión.

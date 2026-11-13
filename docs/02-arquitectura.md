@@ -79,7 +79,7 @@ prueba de equivalencia:
 ## Capas
 | Capa | Implementación |
 |---|---|
-| Experiencia | Streamlit: wizard por fases, selector de lenguaje origen/destino, vista lado a lado legacy ↔ regla ↔ código nuevo, aprobación, tablero |
+| Experiencia | **AgenTCS — Migration Studio** (React + Vite, `ui/`): ruta de migración, selector origen/destino, reglas con evidencia, aprobación HITL, vista lado a lado, pruebas y tablero. Habla con la **API FastAPI** (`copilot/api/`) usando los contratos (ADR-004) |
 | Orquestación | LangGraph con estado e `interrupt` para HITL |
 | Análisis estático | Adaptadores de origen (tree-sitter cuando hay gramática; segmentador genérico si no) + grafo (networkx) + métricas |
 | Conocimiento (RAG) | Una skill/carpeta por lenguaje: semántica, tipos, trampas; estándares por destino |

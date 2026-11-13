@@ -47,8 +47,8 @@ AgenTCS/
 │   ├── security/               # enmascaramiento de secretos/PII
 │   ├── knowledge/              # RAG: estándares, glosario, mapeo de tipos
 │   ├── verification/           # sandbox: compilar, ejecutar, comparar
-│   └── api/                    # FastAPI
-├── ui/                         # interfaz (Streamlit o React)
+│   └── api/                    # FastAPI (service.py = lógica, app.py = HTTP, demo.py = modo demo)
+├── ui/                         # AgenTCS — Migration Studio (React + Vite), ver ui/README.md
 └── output/                     # paquete de migración generado por cada ejecución
 ```
 
@@ -57,7 +57,7 @@ AgenTCS/
 # Solo requiere Docker
 cp .env.example .env    # poner ANTHROPIC_API_KEY (nunca commitear .env)
 docker compose up --build
-# UI en http://localhost:8501
+# Interfaz y API en http://localhost:8000  (AGENTCS_MODE=demo por defecto)
 # Con PL/SQL como origen ejecutable:  docker compose --profile oracle up --build
 
 # En otra máquina sin build ni internet:

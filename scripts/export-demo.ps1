@@ -5,7 +5,7 @@
 # En la máquina de demo (solo necesita Docker Desktop):
 #   docker load -i agentcs-demo.tar
 #   docker compose up            (sin --build)
-#   abrir http://localhost:8501
+#   abrir http://localhost:8000
 
 docker save -o agentcs-demo.tar agentcs/copilot:latest
 Write-Host "Imagen exportada a agentcs-demo.tar" -ForegroundColor Green
