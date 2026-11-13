@@ -58,6 +58,9 @@ def migrate(args: argparse.Namespace) -> int:
     if not args.auto_approve:
         print(f"\nRevisa y aprueba las reglas en la interfaz o la API (run {state.run_id}), o usa --auto-approve.")
         return 0
+    if args.expected:
+        info = service.upload_expected(state.run_id, Path(args.expected).name, Path(args.expected).read_bytes())
+        print(f"  Pares E/S esperados: {info['pairs']} (oráculo nivel B si el legacy no se puede ejecutar)")
     for rule in state.spec.rules:
         state = service.decide_rule(state.run_id, rule.id, "approve", args.reviewer, AUTO_COMMENT)
     state = service.approve_spec(state.run_id, args.reviewer)
@@ -85,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--patience", type=int, default=2)
     m.add_argument("--auto-approve", action="store_true", help="Aprueba todas las reglas (solo para pruebas)")
     m.add_argument("--reviewer", default="cli")
+    m.add_argument("--expected", default=None, help="Pares entrada/salida esperados (.json) para el oráculo nivel B")
     args = parser.parse_args(argv)
     try:
         return migrate(args)

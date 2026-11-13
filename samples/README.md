@@ -20,6 +20,22 @@ python -m copilot.engine migrate --source samples/cobol/PAGOMIN.cbl --target typ
 python -m copilot.engine migrate --source samples/plsql/fn_comision_transferencia.sql --target csharp --auto-approve
 ```
 
+## Pares esperados (oráculo nivel B)
+
+Cuando el legacy no se puede ejecutar en el contenedor (p. ej. PL/SQL sin Oracle), se pueden aportar pares
+entrada/salida esperados. Se usan como casos de prueba y como oráculo; el reporte lo declara como nivel B.
+
+```json
+[{"id": "P01", "input": {"monto": "400000", "canal": "WEB", "segmento": "BASICO"}, "output": {"comision": "1904.00"}},
+ {"id": "P02", "input": {"monto": "0", "canal": "APP", "segmento": "BASICO"}, "output": {"comision": "0"}}]
+```
+
+- Decimales como texto, nunca como número con punto. Cada par lleva `output` o `error` (`{"code", "message"}`).
+- Los nombres de los campos deben ser los del contrato de la especificación extraída; si no cuadran, la API
+  responde `PAIRS_MISMATCH` con la lista de entradas y salidas esperadas.
+- API: `POST /api/runs/{id}/expected` (archivo .json) antes de aprobar la especificación.
+  CLI: `--expected pares.json`.
+
 ## Casos de referencia
 
 Calculados con `decimal` de Python siguiendo la semántica descrita en cada cabecera. Sirven para revisar

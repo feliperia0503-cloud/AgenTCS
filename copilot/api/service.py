@@ -20,7 +20,7 @@ from copilot.contracts import (
 )
 from copilot.security import Sanitizer
 
-from . import catalog, demo, sources
+from . import catalog, demo, pairs, reports, sources
 
 log = logging.getLogger("agentcs.api")
 
@@ -179,6 +179,29 @@ class CopilotService:
         self.store.save(state)
         return state
 
+    def upload_expected(self, run_id: str, name: str, data: bytes) -> dict:
+        """Oráculo nivel B: guarda pares E/S esperados. Solo antes de generar el código."""
+        state = self.get_run(run_id)
+        if state.mode != RunMode.REAL:
+            raise ServiceError(409, "PAIRS_DEMO_MODE", "El modo demo no usa pares propios.",
+                               "Crea una ejecución real para subir pares entrada/salida.")
+        if state.phases[Phase.GENERACION].status != PhaseStatus.PENDIENTE:
+            raise ServiceError(409, "PAIRS_TOO_LATE", "La generación ya empezó; los pares no se pueden cambiar.",
+                               "Crea una nueva ejecución y sube los pares antes de aprobar la especificación.")
+        try:
+            parsed = pairs.parse(name, data)
+        except pairs.PairsError as exc:
+            raise ServiceError(exc.status, exc.code, exc.message, exc.action) from None
+        problems = pairs.check_against(state.spec, parsed) if state.spec else []
+        if problems:
+            raise ServiceError(422, "PAIRS_MISMATCH", f"Los pares no cuadran con el contrato: {'; '.join(problems[:5])}.",
+                               pairs.contract_hint(state.spec))
+        pairs.save(self.store.root / run_id, parsed)
+        return {"run_id": run_id, "pairs": len(parsed),
+                "validated_against_spec": state.spec is not None,
+                "note": "Se usarán como casos de prueba. Si el legacy se puede ejecutar (nivel A), manda la "
+                        "ejecución real; si no, estos pares son el oráculo (nivel B)."}
+
     def approve_spec(self, run_id: str, by: str) -> RunState:
         state = self._require_review_phase(run_id)
         if not state.spec.is_fully_reviewed:
@@ -190,6 +213,11 @@ class CopilotService:
                                "Aprueba al menos una regla para generar código.")
         if state.mode == RunMode.REAL:
             self._require_target_pack(state.target_language)
+            provided = pairs.load(self.store.root / run_id)
+            if provided and (problems := pairs.check_against(state.spec, provided)):
+                raise ServiceError(422, "PAIRS_MISMATCH",
+                                   f"Los pares E/S no cuadran con la especificación: {'; '.join(problems[:5])}.",
+                                   pairs.contract_hint(state.spec) + " Sube un archivo corregido.")
         state.approved_by = by
         if state.mode == RunMode.DEMO:
             demo.complete_demo_run(state)
@@ -219,7 +247,8 @@ class CopilotService:
         self._guarded(state, lambda engine: engine.analyze(state, self.store.save))
 
     def _generate(self, state: RunState) -> None:
-        self._guarded(state, lambda engine: engine.generate_and_verify(state, self.store.save))
+        provided = pairs.load(self.store.root / state.run_id)
+        self._guarded(state, lambda engine: engine.generate_and_verify(state, self.store.save, pairs=provided))
 
     def _guarded(self, state: RunState, work: Callable[[object], None]) -> None:
         """Ejecuta una etapa del motor; cualquier fallo queda en la fase en curso con acción sugerida."""
@@ -279,6 +308,10 @@ class CopilotService:
             z.writestr("reports/analysis.json", state.analysis.model_dump_json(indent=2) if state.analysis else "{}")
             z.writestr("reports/equivalence-report.json", json.dumps(
                 self.verification(run_id), indent=2, ensure_ascii=False))
+            security = reports.cached_security(self.store.root / run_id, state)
+            z.writestr("reports/security.json", json.dumps(security, indent=2, ensure_ascii=False))
+            z.writestr("reports/security.md", reports.security_markdown(security))
+            z.writestr("reports/executive-summary.md", reports.executive_summary(state, security))
             z.writestr("tests/cases.json", json.dumps([c.model_dump() for c in state.cases], indent=2, ensure_ascii=False))
             z.writestr("tests/expected.json", json.dumps([o.model_dump() for o in state.expected], indent=2, ensure_ascii=False))
             for path, content in state.generated_files.items():
