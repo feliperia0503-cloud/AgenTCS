@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgenTCS · Modernización de código legacy con equivalencia demostrable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0a0f1e;--ink2:#0e1630;--surface:#121c3a;--line:rgba(140,165,215,.16);--line2:rgba(140,165,215,.28);
+    --text:#eaf0fb;--muted:#9db0d4;--faint:#6d7fa6;--teal:#34e2c4;--violet:#9d8cff;--amber:#ffcf6b;--rose:#ff7a9c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:80px;background:#0a0f1e}
+  body{font-family:'Manrope',system-ui,sans-serif;color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 700px at 85% -5%,rgba(52,226,196,.10),transparent 60%),
+    radial-gradient(1000px 800px at -10% 35%,rgba(157,140,255,.09),transparent 55%),linear-gradient(180deg,var(--ink2),var(--ink) 900px);background-color:#0a0f1e;min-height:100vh}
+  code{font-family:'JetBrains Mono',monospace;font-size:.86em;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);background:rgba(10,15,30,.75);border-bottom:1px solid var(--line)}
+  .hin{max-width:1180px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:20px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+  .mk{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--teal),#17b89d);display:grid;place-items:center;color:#06231d;font-weight:800}
+  nav{margin-left:auto;display:flex;gap:2px;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:6px 11px;border-radius:9px}
+  nav a:hover,nav a.on{color:var(--text);background:rgba(52,226,196,.12)}
+  main{max-width:1180px;margin:0 auto;padding:0 28px 60px}
+  section{padding:64px 0 8px}
+  section+section{border-top:1px solid var(--line)}
+  .kicker{font-size:12.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .kicker::before{content:"";width:26px;height:2px;background:var(--teal);border-radius:2px}
+  h1{font-size:clamp(36px,5.4vw,68px);line-height:1.03;font-weight:800;letter-spacing:-.02em;max-width:17ch}
+  h1 .g{background:linear-gradient(120deg,var(--teal),var(--violet) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:clamp(26px,3vw,40px);line-height:1.1;font-weight:800;letter-spacing:-.015em;max-width:24ch}
+  .lead{font-size:clamp(16px,1.5vw,20px);color:var(--muted);max-width:64ch;margin-top:16px;font-weight:500}
+  .hero{padding:80px 0 50px}
+  .badge{display:inline-flex;gap:8px;padding:7px 15px;border:1px solid var(--line2);border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:26px}
+  .badge b{color:var(--teal)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:44px}
+  .kpi{border:1px solid var(--line);border-radius:16px;padding:20px;background:linear-gradient(180deg,var(--surface),var(--ink2))}
+  .kpi .v{font-size:clamp(28px,3vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1}
+  .kpi .l{color:var(--muted);font-size:13.5px;margin-top:8px;font-weight:500}
+  .team{margin-top:30px;color:var(--faint);font-size:14px;font-weight:600}
+  .team b{color:var(--muted)}
+  .grid{display:grid;gap:16px;margin-top:30px}
+  .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:linear-gradient(180deg,var(--surface),var(--ink2));border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h3{font-size:16.5px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .card p{font-size:14.5px;color:var(--muted)}
+  .ic{font-size:22px}
+  .pipe{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-top:30px}
+  .st{border:1px solid var(--line);border-radius:14px;padding:16px 10px;text-align:center;background:var(--surface)}
+  .st .n{width:30px;height:30px;margin:0 auto 10px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:14px;background:rgba(52,226,196,.12);color:var(--teal);border:1px solid rgba(52,226,196,.3)}
+  .st.h{border-color:rgba(157,140,255,.5)} .st.h .n{background:linear-gradient(135deg,var(--violet),#6d5cff);color:#fff;border:0}
+  .st .t{font-weight:700;font-size:13.5px} .st .s{font-size:11.5px;color:var(--faint);margin-top:3px;line-height:1.35}
+  .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+  .lv{border:1px solid var(--line);border-radius:16px;padding:22px;background:var(--surface)}
+  .lv .tg{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:19px;margin-bottom:12px}
+  .lv.A .tg{background:rgba(52,226,196,.15);color:var(--teal)} .lv.B .tg{background:rgba(255,207,107,.14);color:var(--amber)} .lv.C .tg{background:rgba(157,140,255,.15);color:var(--violet)}
+  .lv h3{font-size:16px;margin-bottom:4px} .lv p{font-size:14px;color:var(--muted)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;margin-top:28px}
+  svg{width:100%;height:auto} svg text{font-family:Manrope,sans-serif;text-anchor:middle}
+  .arch .bx{fill:#121c3a;stroke:rgba(140,165,215,.30);stroke-width:1.2}
+  .arch .bx.v{stroke:rgba(157,140,255,.55)} .arch .bx.a{stroke:rgba(255,207,107,.5)}
+  .arch .bx.hub{fill:rgba(52,226,196,.07);stroke:#34e2c4;stroke-width:1.5}
+  .arch .in{fill:#0e1630;stroke:rgba(52,226,196,.28)}
+  .arch .t{fill:#eaf0fb;font-size:17px;font-weight:700} .arch .tl{fill:#34e2c4}
+  .arch .s{fill:#9db0d4;font-size:12.5px;font-weight:500} .arch .s2{fill:#eaf0fb;font-size:13px;font-weight:600}
+  .arch .cap{fill:#6d7fa6;font-size:13px;font-weight:600;text-anchor:start}
+  .arch .ln{stroke:#6d7fa6;stroke-width:1.6} .arch .ln.t2{stroke:#34e2c4}
+  table{width:100%;border-collapse:collapse;margin-top:26px;font-size:14.5px}
+  th{text-align:left;color:var(--faint);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:10px 14px;border-bottom:1px solid var(--line2)}
+  td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  td:first-child{font-family:'JetBrains Mono',monospace;color:var(--teal);font-weight:600;white-space:nowrap}
+  td:nth-child(2){color:var(--text);font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line2);font-size:13.5px;font-weight:600;color:var(--muted);background:rgba(20,30,60,.4)}
+  .chip b{color:var(--text)}
+  .params{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .pm{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface)}
+  .pm .v{font-weight:800;font-size:20px} .pm .l{color:var(--muted);font-size:13px}
+  ul.dl{list-style:none;display:grid;gap:12px;margin-top:6px}
+  ul.dl li{display:flex;gap:12px;font-size:15px}
+  ul.dl li::before{content:"›";color:var(--teal);font-weight:800}
+  .note{margin-top:22px;font-size:13.5px;color:var(--faint);border-left:2px solid var(--line2);padding-left:14px;max-width:72ch}
+  .close{text-align:center;padding:80px 0 40px}
+  .close .q{font-size:clamp(26px,3.4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.18;max-width:22ch;margin:0 auto}
+  .accent{color:var(--teal)} .accent-v{color:var(--violet)}
+  footer{max-width:1180px;margin:0 auto;padding:22px 28px 36px;color:var(--faint);font-size:13px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  @media(max-width:980px){nav{display:none}.kpis,.g4{grid-template-columns:1fr 1fr}.g3,.levels,.split{grid-template-columns:1fr}.pipe{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <div class="brand"><span class="mk">A</span> AgenTCS</div>
+  <nav>
+    <a href="#problema">Problema</a><a href="#solucion">Solución</a><a href="#equivalencia">Equivalencia</a>
+    <a href="#arquitectura">Arquitectura</a><a href="#agentes">Agentes</a><a href="#metodo">Método</a><a href="#resultados">Resultados</a>
+  </nav>
+</div></header>
+
+<main>
+  <div class="hero">
+    <span class="badge">Hackathon de IA · <b>TCS AI Friday</b></span>
+    <h1>Modernizar código legacy <span class="g">demostrando</span> que el negocio no cambia</h1>
+    <p class="lead">AgenTCS es un copiloto de IA que convierte sistemas antiguos —COBOL, PL/SQL, Delphi, RPG, .NET y Java legacy— en código moderno, y prueba la equivalencia funcional ejecutando el sistema viejo y el nuevo con las mismas entradas.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="v accent">8</div><div class="l">lenguajes de origen soportados</div></div>
+      <div class="kpi"><div class="v accent">4</div><div class="l">destinos: Java, C#, TypeScript y Python</div></div>
+      <div class="kpi"><div class="v accent">0</div><div class="l">tolerancia en la comparación de resultados</div></div>
+      <div class="kpi"><div class="v accent">1</div><div class="l">comando para ejecutarlo todo (Docker)</div></div>
+    </div>
+    <p class="team">Equipo: <b>Juan Bastidas</b> · <b>Felipe Rincón</b> · <b>Dairon Rodríguez</b></p>
+  </div>
+
+  <section id="problema">
+    <span class="kicker">El problema</span>
+    <h2>Modernizar no es traducir sintaxis</h2>
+    <div class="grid g3">
+      <div class="card"><h3><span class="ic">🧮</span>Riesgo en los cálculos</h3><p>Un redondeo distinto o una regla omitida altera un resultado financiero sin que nadie lo note.</p></div>
+      <div class="card"><h3><span class="ic">📦</span>Conocimiento atrapado</h3><p>Las reglas de negocio viven dispersas en el código y en pocos especialistas, sin documentación vigente.</p></div>
+      <div class="card"><h3><span class="ic">⏳</span>Validación costosa</h3><p>Sin pruebas diferenciales, demostrar que el sistema nuevo se comporta igual es lento, manual y caro.</p></div>
+    </div>
+  </section>
+
+  <section id="solucion">
+    <span class="kicker">La solución</span>
+    <h2>Un flujo auditable de ocho fases</h2>
+    <p class="lead">Cada fase tiene un control de calidad. El flujo se detiene para la aprobación humana y repite generación y verificación hasta alcanzar la equivalencia.</p>
+    <div class="pipe">
+      <div class="st"><div class="n">1</div><div class="t">Ingesta</div><div class="s">detección y sanitización</div></div>
+      <div class="st"><div class="n">2</div><div class="t">Análisis</div><div class="s">unidades y dependencias</div></div>
+      <div class="st"><div class="n">3</div><div class="t">Especificación</div><div class="s">reglas con líneas de origen</div></div>
+      <div class="st h"><div class="n">4</div><div class="t">Revisión</div><div class="s">aprobación humana</div></div>
+      <div class="st"><div class="n">5</div><div class="t">Diseño</div><div class="s">arquitectura destino</div></div>
+      <div class="st"><div class="n">6</div><div class="t">Código</div><div class="s">compila sin críticos ↺</div></div>
+      <div class="st"><div class="n">7</div><div class="t">Verificación</div><div class="s">equivalencia ↺</div></div>
+      <div class="st"><div class="n">8</div><div class="t">Paquete</div><div class="s">código y evidencia</div></div>
+    </div>
+    <div class="grid g4">
+      <div class="card"><h3>Agnóstico</h3><p>Cualquier origen → especificación neutral → cualquier destino, con el framework y la arquitectura elegidos.</p></div>
+      <div class="card"><h3>Trazable</h3><p>Cada regla cita el archivo y las líneas del código legacy de donde salió.</p></div>
+      <div class="card"><h3>Supervisado</h3><p>Ninguna regla llega al código sin que una persona la apruebe, ajuste o rechace.</p></div>
+      <div class="card"><h3>Seguro</h3><p>Secretos y datos personales se enmascaran antes de cualquier uso de IA.</p></div>
+    </div>
+  </section>
+
+  <section id="equivalencia">
+    <span class="kicker">El diferenciador</span>
+    <h2>Equivalencia demostrada, con su nivel de evidencia declarado</h2>
+    <div class="levels">
+      <div class="lv A"><div class="tg">A</div><h3>Legacy ejecutado</h3><p>El código antiguo corre dentro del contenedor y su salida es la referencia. Es la evidencia más fuerte.</p></div>
+      <div class="lv B"><div class="tg">B</div><h3>Pares entrada/salida</h3><p>El cliente aporta resultados esperados cuando el legacy no se puede ejecutar, por ejemplo PL/SQL sin Oracle.</p></div>
+      <div class="lv C"><div class="tg">C</div><h3>Referencia derivada</h3><p>Implementación independiente generada desde la especificación aprobada. Se declara como la evidencia más débil.</p></div>
+    </div>
+    <p class="note">La comparación es campo por campo, con tolerancia cero y decimales exactos con escala y modo de redondeo explícitos. Nunca se usa punto flotante para dinero.</p>
+  </section>
+
+  <section id="arquitectura">
+    <span class="kicker">Arquitectura</span>
+    <h2>Un núcleo agnóstico y adaptadores por lenguaje</h2>
+    <svg class="arch" viewBox="0 0 1120 470" role="img" aria-label="Arquitectura de AgenTCS" style="margin-top:28px">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6d7fa6"/></marker>
+      <marker id="aht" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34e2c4"/></marker></defs>
+      <rect x="230" y="10" width="880" height="450" rx="22" fill="none" stroke="rgba(140,165,215,.28)" stroke-dasharray="6 6"/>
+      <text x="252" y="38" class="cap">Una sola imagen Docker</text>
+      <rect x="10" y="190" width="180" height="90" rx="16" class="bx"/><text x="100" y="228" class="t">Usuario</text><text x="100" y="252" class="s">sube código · aprueba reglas</text>
+      <line x1="190" y1="235" x2="262" y2="235" class="ln" marker-end="url(#ah)"/>
+      <rect x="265" y="190" width="170" height="90" rx="16" class="bx v"/><text x="350" y="228" class="t">Interfaz web</text><text x="350" y="252" class="s">8 fases · revisión</text>
+      <line x1="435" y1="235" x2="487" y2="235" class="ln" marker-end="url(#ah)"/>
+      <rect x="490" y="190" width="150" height="90" rx="16" class="bx"/><text x="565" y="228" class="t">API</text><text x="565" y="252" class="s">ingesta universal</text>
+      <line x1="640" y1="235" x2="692" y2="235" class="ln" marker-end="url(#ah)"/>
+      <rect x="695" y="62" width="395" height="200" rx="18" class="bx hub"/><text x="892" y="92" class="t tl">Motor de autocorrección</text>
+      <rect x="715" y="110" width="170" height="54" rx="11" class="in"/><text x="800" y="142" class="s2">Extracción de reglas</text>
+      <rect x="900" y="110" width="170" height="54" rx="11" class="in"/><text x="985" y="142" class="s2">Casos de prueba</text>
+      <rect x="715" y="178" width="170" height="54" rx="11" class="in"/><text x="800" y="210" class="s2">Oráculo A · B · C</text>
+      <rect x="900" y="178" width="170" height="54" rx="11" class="in"/><text x="985" y="210" class="s2">Generar ↺ comparar</text>
+      <rect x="490" y="62" width="150" height="90" rx="16" class="bx a"/><text x="565" y="100" class="t">Sanitizador</text><text x="565" y="124" class="s">antes de cada llamada</text>
+      <line x1="695" y1="108" x2="642" y2="108" class="ln" marker-end="url(#ah)"/>
+      <rect x="265" y="62" width="170" height="90" rx="16" class="bx a"/><text x="350" y="100" class="t">Modelo Claude</text><text x="350" y="124" class="s">caché + modo replay</text>
+      <line x1="490" y1="108" x2="437" y2="108" class="ln" marker-end="url(#ah)"/>
+      <rect x="695" y="300" width="190" height="120" rx="16" class="bx"/><text x="790" y="332" class="t">Packs de origen</text><text x="790" y="358" class="s">COBOL · PL/SQL · Delphi</text><text x="790" y="380" class="s">PHP · RPG · .NET / Java</text><text x="790" y="402" class="s">ejecutan el legacy real</text>
+      <rect x="900" y="300" width="190" height="120" rx="16" class="bx"/><text x="995" y="332" class="t">Packs de destino</text><text x="995" y="358" class="s">Java · C# · TypeScript</text><text x="995" y="380" class="s">Python + framework</text><text x="995" y="402" class="s">compilan y verifican</text>
+      <line x1="790" y1="262" x2="790" y2="298" class="ln t2" marker-end="url(#aht)"/><line x1="995" y1="262" x2="995" y2="298" class="ln t2" marker-end="url(#aht)"/>
+      <rect x="490" y="320" width="150" height="90" rx="16" class="bx"/><text x="565" y="358" class="t">Sandbox</text><text x="565" y="382" class="s">aislado · sin secretos</text>
+      <line x1="695" y1="365" x2="642" y2="365" class="ln" marker-end="url(#ah)"/><line x1="490" y1="365" x2="437" y2="365" class="ln" marker-end="url(#ah)"/>
+      <rect x="265" y="320" width="170" height="90" rx="16" class="bx v"/><text x="350" y="358" class="t">Paquete</text><text x="350" y="382" class="s">código · reportes</text>
+    </svg>
+    <div class="chips">
+      <span class="chip"><b>Núcleo:</b> Python · FastAPI</span><span class="chip"><b>Interfaz:</b> React</span>
+      <span class="chip"><b>Modelo:</b> Claude (Anthropic)</span><span class="chip"><b>Runtimes:</b> GnuCOBOL · Mono · JDK 21 · .NET 8 · Node</span>
+    </div>
+  </section>
+
+  <section id="agentes">
+    <span class="kicker">Agentes de IA</span>
+    <h2>Siete agentes especializados, orquestados por un motor determinista</h2>
+    <p class="lead">La IA propone reglas y código; la plataforma compila, ejecuta, compara y decide. Cada respuesta del modelo se valida contra un esquema antes de usarse.</p>
+    <table>
+      <thead><tr><th>Agente</th><th>Función</th><th>Fase</th></tr></thead>
+      <tbody>
+        <tr><td>advisor</td><td>Recomienda destino, framework y arquitectura</td><td>Configuración</td></tr>
+        <tr><td>extractor</td><td>Extrae reglas de negocio con líneas de origen y nivel de confianza</td><td>Especificación</td></tr>
+        <tr><td>tests</td><td>Genera casos típicos, de borde e inválidos</td><td>Verificación</td></tr>
+        <tr><td>legacy_harness</td><td>Prepara la ejecución del legacy real</td><td>Oráculo nivel A</td></tr>
+        <tr><td>oracle</td><td>Construye una referencia independiente si el legacy no se puede ejecutar</td><td>Oráculo nivel C</td></tr>
+        <tr><td>generator</td><td>Genera el código destino y lo corrige con cada diferencia encontrada</td><td>Código</td></tr>
+        <tr><td>lessons</td><td>Consolida aprendizajes para corridas futuras</td><td>Mejora continua</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="metodo">
+    <span class="kicker">Método</span>
+    <h2>Metodología, técnicas y patrones</h2>
+    <div class="split">
+      <div>
+        <h3 style="font-size:18px;margin-bottom:14px">Motor de autocorrección</h3>
+        <p style="color:var(--muted);font-size:15px">Genera, compila, compara contra el oráculo y devuelve al modelo cada diferencia: caso, campo, valor esperado, valor obtenido y regla. Siempre entrega el mejor intento.</p>
+        <div class="params" style="margin-top:18px">
+          <div class="pm"><div class="v">5</div><div class="l">intentos máximos</div></div>
+          <div class="pm"><div class="v">2</div><div class="l">intentos sin mejora para detenerse</div></div>
+          <div class="pm"><div class="v">600k</div><div class="l">tokens de presupuesto por corrida</div></div>
+          <div class="pm"><div class="v">0,7 / 0,3</div><div class="l">peso de casos / campos en la similitud</div></div>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:0">
+        <div class="card"><h3>Metodología</h3><p>Contratos primero, desarrollo guiado por especificación, humano en el ciclo, pruebas diferenciales y decisiones registradas en 7 ADRs.</p></div>
+        <div class="card"><h3>Patrones</h3><p>Puertos y adaptadores, registro de plugins con Strategy, pipeline con quality gates, golden master y arquitectura limpia en el código generado.</p></div>
+        <div class="card"><h3>Técnicas de IA</h3><p>Salida estructurada validada, retroalimentación de errores, memoria de lecciones sin reentrenar y caché con modo replay sin conexión.</p></div>
+        <div class="card"><h3>IA responsable</h3><p>Sanitización previa, solo datos sintéticos, ejecución en sandbox, escaneo de secretos y SAST sobre el código generado.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultados">
+    <span class="kicker">Resultados y entregables</span>
+    <h2>Lo que entrega cada migración</h2>
+    <div class="split">
+      <ul class="dl">
+        <li>Código moderno con arquitectura limpia del destino</li>
+        <li>Reglas de negocio y matriz de trazabilidad regla ↔ líneas legacy</li>
+        <li>Casos de prueba y reporte de equivalencia con el nivel de oráculo</li>
+        <li>Resumen ejecutivo de una página por corrida</li>
+        <li>Reporte de seguridad y registro de datos enmascarados</li>
+      </ul>
+      <div class="card" style="border-color:rgba(52,226,196,.35)">
+        <h3><span class="ic">✅</span>Corrida de referencia</h3>
+        <p style="font-size:15px;margin-top:6px"><b style="color:var(--text)">COBOL → Python</b> · <b style="color:var(--teal)">34 de 34 casos</b> equivalentes · similitud <b style="color:var(--teal)">1,00</b> en 2 intentos.</p>
+        <p style="font-size:13px;margin-top:10px;color:var(--faint)">Oráculo nivel C. Las corridas con el legacy ejecutado (nivel A) se presentan en la demostración en vivo.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="close">
+    <p class="q">Modernizar <span class="accent">conservando el comportamiento</span> del negocio, y poder <span class="accent-v">demostrarlo</span>.</p>
+  </div>
+</main>
+
+<footer><span>AgenTCS · Juan Bastidas · Felipe Rincón · Dairon Rodríguez</span><span>Hackathon TCS AI Friday · Datos 100 % sintéticos</span></footer>
+
+<script>
+  var links=[].slice.call(document.querySelectorAll('nav a')),secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  function spy(){var y=window.scrollY+110,c=-1;secs.forEach(function(s,i){if(s.offsetTop<=y)c=i});links.forEach(function(a,i){a.classList.toggle('on',i===c)})}
+  addEventListener('scroll',spy,{passive:true});spy();
+</script>
+</body>
+</html>
