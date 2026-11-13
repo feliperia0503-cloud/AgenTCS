@@ -1,7 +1,9 @@
 # 06 · Guion de demo (10 minutos)
 
-**Caso principal:** `samples/cobol/INTMORA.cbl`, código sintético sin datos reales.  
-**Destino preparado:** el destino que haya terminado en verde en la corrida real. No cambiarlo durante la presentación.  
+**Caso principal:** `samples/cobol/INTMORA.cbl`, código sintético sin datos reales.
+
+**Destino preparado:** el destino que haya terminado en verde en la corrida real. No cambiarlo durante la presentación.
+
 **Regla de relato:** decir únicamente métricas visibles en pantalla; no completar de memoria valores pendientes.
 
 | Tiempo | Acción en pantalla | Mensaje del presentador | Evidencia que debe quedar visible |
