@@ -31,7 +31,7 @@ En `copilot/contracts/` (Pydantic + Protocols), siguiendo la skill `language-ada
 ## Paso 4 · Primeros prompts para Claude Code
 **A · Núcleo y adaptadores**
 > Implementa el núcleo agnóstico en `copilot/`: registro de packs que descubre `copilot/languages/*/pack.yaml`,
-> un segmentador genérico de respaldo, y el pipeline LangGraph: ingesta (detectar lenguaje con los packs +
+> un segmentador genérico de respaldo, y el pipeline (hoy: motor de autocorrección, ADR-005): ingesta (detectar lenguaje con los packs +
 > sanitizar) → análisis (SourceAdapter) → Spec neutral (Claude, salida JSON validada con Pydantic) →
 > interrupt de aprobación → generación (TargetAdapter) → verificación. Incluye modo replay (caché del LLM
 > por hash del prompt). Luego crea los packs `cobol` (origen) y `java` (destino). El núcleo no debe mencionar

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import threading
 import uuid
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 from copilot.contracts import (
@@ -19,6 +21,8 @@ from copilot.contracts import (
 from copilot.security import Sanitizer
 
 from . import demo
+
+log = logging.getLogger("agentcs.api")
 
 OUTPUT_DIR = Path(os.environ.get("AGENTCS_OUTPUT", "output")) / "runs"
 DEFAULT_MODE = RunMode(os.environ.get("AGENTCS_MODE", RunMode.DEMO.value))
@@ -35,10 +39,10 @@ SOURCES = [
     {"id": "rpg", "name": "RPG (IBM i)", "extensions": [".rpg", ".rpgle", ".sqlrpgle"], "oracle_level": "C", "status": "planeado"},
 ]
 TARGETS = [
+    {"id": "python", "name": "Python 3.12", "status": "disponible (motor real)"},
     {"id": "java", "name": "Java 21 + Spring Boot 3", "status": "en construcción"},
     {"id": "typescript", "name": "TypeScript + Node 20", "status": "planeado"},
     {"id": "csharp", "name": "C# .NET 8", "status": "planeado"},
-    {"id": "python", "name": "Python 3.12", "status": "planeado"},
 ]
 _EXT_TO_SOURCE = {ext: s["id"] for s in SOURCES for ext in s["extensions"]}
 
@@ -82,9 +86,13 @@ class RunStore:
 
 
 class CopilotService:
-    def __init__(self, store: RunStore | None = None, mode: RunMode = DEFAULT_MODE):
+    def __init__(self, store: RunStore | None = None, mode: RunMode = DEFAULT_MODE,
+                 engine_factory: Callable[[], object] | None = None, background: bool = True):
         self.store = store or RunStore()
         self.mode = mode
+        self.background = background
+        self._engine_factory = engine_factory
+        self._engine = None
 
     # ---------------------------------------------------------------- catálogo
     def languages(self) -> dict:
@@ -115,9 +123,8 @@ class CopilotService:
         state.start(Phase.INGESTA)
         state.finish(Phase.INGESTA, ok=True,
                      message=f"{len(sanitized)} archivo(s) {source_language} · {len(findings)} dato(s) sensible(s) enmascarado(s)")
-        # El pipeline real (LangGraph) continúa desde aquí con la fase de análisis.
-        state.phases[Phase.ANALISIS].gate_message = "Pendiente: pipeline real en construcción (usa el modo demo para ensayar)."
         self.store.save(state)
+        self._dispatch(self._analyze, state)
         return state
 
     def get_run(self, run_id: str) -> RunState:
@@ -176,14 +183,67 @@ class CopilotService:
         if not state.spec.active_rules:
             raise ServiceError(409, "NO_ACTIVE_RULES", "Todas las reglas fueron rechazadas.",
                                "Aprueba al menos una regla para generar código.")
+        if state.mode == RunMode.REAL:
+            self._require_target_pack(state.target_language)
         state.approved_by = by
         if state.mode == RunMode.DEMO:
             demo.complete_demo_run(state)
-        else:
-            state.finish(Phase.VALIDACION_HUMANA, ok=True, message=f"Especificación aprobada por {by}")
-            state.phases[Phase.DISENO].gate_message = "Pendiente: pipeline real en construcción."
+            self.store.save(state)
+            return state
+        state.finish(Phase.VALIDACION_HUMANA, ok=True, message=f"Especificación aprobada por {by}")
         self.store.save(state)
+        self._dispatch(self._generate, state)
         return state
+
+    # ---------------------------------------------------------------- motor real (ADR-005)
+    def _get_engine(self):
+        if self._engine is None:
+            if self._engine_factory is None:
+                from copilot.engine.pipeline import Engine
+                self._engine_factory = Engine.from_env
+            self._engine = self._engine_factory()
+        return self._engine
+
+    def _dispatch(self, job: Callable[[RunState], None], state: RunState) -> None:
+        if self.background:
+            threading.Thread(target=job, args=(state,), daemon=True, name=f"agentcs-{state.run_id}").start()
+        else:
+            job(state)
+
+    def _analyze(self, state: RunState) -> None:
+        self._guarded(state, lambda engine: engine.analyze(state, self.store.save))
+
+    def _generate(self, state: RunState) -> None:
+        self._guarded(state, lambda engine: engine.generate_and_verify(state, self.store.save))
+
+    def _guarded(self, state: RunState, work: Callable[[object], None]) -> None:
+        """Ejecuta una etapa del motor; cualquier fallo queda en la fase en curso con acción sugerida."""
+        from copilot.engine.llm import LLMError
+        try:
+            work(self._get_engine())
+        except LLMError as exc:
+            self._fail_current(state, f"{exc.message} Acción: {exc.action}")
+        except Exception:   # noqa: BLE001 — nunca exponer trazas ni datos del usuario
+            log.exception("Fallo inesperado en el motor (run %s)", state.run_id)
+            self._fail_current(state, "Error inesperado en el motor. Acción: reintenta; si persiste, revisa los registros de la API.")
+
+    def _fail_current(self, state: RunState, message: str) -> None:
+        running = [p for p in Phase if state.phases[p].status == PhaseStatus.EN_CURSO]
+        pending = [p for p in Phase if state.phases[p].status == PhaseStatus.PENDIENTE]
+        phase = (running or pending or [Phase.EMPAQUETADO])[0]
+        state.finish(phase, ok=False, message=message)
+        state.errors.append(message)
+        self.store.save(state)
+
+    @staticmethod
+    def _require_target_pack(target: str) -> None:
+        from copilot.languages.registry import PackNotAvailable, get_target
+        try:
+            get_target(target)
+        except PackNotAvailable as exc:
+            raise ServiceError(422, "TARGET_PACK_MISSING",
+                               f"El motor real aún no tiene el pack de destino '{target}'.",
+                               f"Usa un destino disponible ({', '.join(exc.available)}) o el modo demo.") from None
 
     # ---------------------------------------------------------------- resultados
     def verification(self, run_id: str) -> dict:
@@ -197,7 +257,7 @@ class CopilotService:
 
     def package(self, run_id: str) -> bytes:
         state = self.get_run(run_id)
-        if state.phases[Phase.EMPAQUETADO].status != PhaseStatus.APROBADA:
+        if state.phases[Phase.EMPAQUETADO].status != PhaseStatus.APROBADA or state.spec is None:
             raise ServiceError(409, "PACKAGE_NOT_READY", "El paquete aún no está listo.",
                                "Espera a que termine la verificación.")
         buf = io.BytesIO()

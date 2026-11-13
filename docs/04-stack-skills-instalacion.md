@@ -20,7 +20,7 @@ se lleva la imagen exportada o se abre en el navegador con GitHub Codespaces. Ve
 | GnuCOBOL · Mono · JDK | Ejecutar legacy COBOL, C# .NET Framework y Java antiguo (oráculo nivel A) |
 | Oracle Database Free | PL/SQL legacy — servicio aparte, solo con `--profile oracle` |
 | JDK 21 + Maven · Node + TypeScript · .NET 8 SDK · Python | Compilar y probar el código destino (las herramientas de prueba/calidad van como dependencias de cada plantilla) |
-| Python + uv + `requirements.txt` | Copiloto: anthropic, langgraph, pydantic, fastapi, tree-sitter, oracledb, detect-secrets, networkx, jinja2 |
+| Python + uv + `requirements.txt` | Copiloto: anthropic, pydantic, fastapi, tree-sitter, oracledb, detect-secrets, networkx, jinja2 |
 | Semgrep, gitleaks | SAST y detección de secretos |
 | Node + Claude Code | Solo en el Dev Container (desarrollo), no en la demo |
 

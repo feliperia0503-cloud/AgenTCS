@@ -42,7 +42,7 @@ AgenTCS/
 ├── copilot/                    # orquestador + agentes (Python)
 │   ├── contracts/              # Spec neutral, tipos neutrales, interfaces de adaptadores
 │   ├── languages/              # packs: cobol, plsql, csharp-legacy, java, typescript, csharp, python...
-│   ├── agents/                 # analista, extractor, arquitecto, dev, qa, documentador
+│   ├── engine/                 # motor: extractor, casos, oráculo, generador, bucle, lecciones, CLI
 │   ├── analysis/               # parser, AST, grafo, métricas
 │   ├── security/               # enmascaramiento de secretos/PII
 │   ├── knowledge/              # RAG: estándares, glosario, mapeo de tipos
@@ -52,7 +52,19 @@ AgenTCS/
 └── output/                     # paquete de migración generado por cada ejecución
 ```
 
-## Cómo ejecutar (cuando esté listo)
+## Motor de migración con autocorrección (ADR-005)
+`copilot/engine/` extrae las reglas implícitas del legacy, genera casos de prueba, obtiene los resultados
+esperados (oráculo A/B/C), genera el código destino y lo corrige en bucle con la retroalimentación de las
+pruebas hasta lograr equivalencia total o dejar de mejorar; devuelve siempre la mejor versión y guarda
+lecciones para futuras migraciones (no es fine-tuning).
+
+```bash
+python -m copilot.engine migrate --source legacy/INTERES.cbl --target python --auto-approve
+AGENTCS_LLM_REPLAY=1 python -m copilot.engine migrate ...   # sin internet, desde output/llm_cache
+```
+En la API: `AGENTCS_MODE=real` (con `ANTHROPIC_API_KEY`). El modo `demo` sigue disponible y no usa LLM.
+
+## Cómo ejecutar
 ```bash
 # Solo requiere Docker
 cp .env.example .env    # poner ANTHROPIC_API_KEY (nunca commitear .env)

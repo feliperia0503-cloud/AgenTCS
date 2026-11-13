@@ -19,13 +19,14 @@ El copiloto es **agnóstico de lenguaje**: origen → Spec neutral → destino. 
 - Las pruebas llevan aserciones explícitas con datos realistas; nada de tests vacíos.
 
 ## Stack
-Todo corre dentro del contenedor (Dockerfile / Dev Container). Copiloto: Python (uv, LangGraph, FastAPI, tree-sitter). Interfaz: AgenTCS (React 19 + Vite 8) en `ui/`.
+Todo corre dentro del contenedor (Dockerfile / Dev Container). Copiloto: Python (uv, FastAPI, Anthropic SDK; motor de autocorrección propio en `copilot/engine/`, ADR-005). Interfaz: AgenTCS (React 19 + Vite 8) en `ui/`.
 Runtimes de origen: GnuCOBOL, Mono, JDK, Oracle Free (perfil `oracle`). Destino: JDK 21 + Maven, Node + TypeScript, .NET 8, Python.
 No instalar herramientas en el host; si falta algo, agregarlo al Dockerfile o a requirements.txt.
 
 ## Comandos
 - Pruebas copiloto: `uv run pytest`
 - Pruebas del código generado: el comando `test` del adaptador de destino (p. ej. `mvn verify`, `npm test`, `dotnet test`, `pytest`)
+- Motor (CLI): `python -m copilot.engine migrate --source <archivos> --target python --auto-approve` (`AGENTCS_LLM_REPLAY=1` para usar solo la caché)
 - API local: `uvicorn copilot.api.app:app --reload --port 8000` · Interfaz: `cd ui && npm run dev` (5173)
 - Todo: `docker compose up --build` → http://localhost:8000
 

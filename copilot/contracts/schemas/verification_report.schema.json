@@ -124,6 +124,18 @@
       "default": null,
       "title": "Max Complexity"
     },
+    "similarity": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Similarity"
+    },
     "attempt": {
       "default": 1,
       "title": "Attempt",

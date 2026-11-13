@@ -10,7 +10,7 @@ demostrada y limita los criterios 3–7 a 3/5 si esta falla. Somos 3 personas co
 ## Decisión
 1. **Origen:** COBOL, caso de amortización francesa (ejemplo explícito del reto, dominio bancario).
 2. **Destino:** Java 21 + Spring Boot 3 con arquitectura hexagonal.
-3. **Orquestación:** Python + LangGraph (estado persistente e interrupciones nativas para HITL).
+3. **Orquestación:** ~~LangGraph~~ → motor propio en Python, ver ADR-005.
 4. **LLM:** Claude vía API, con salidas estructuradas (JSON schema).
 5. **Verificación:** GnuCOBOL ejecuta el original para obtener el golden master; Maven + JUnit 5 para el destino.
 6. **UI:** ~~Streamlit~~ → reemplazado por AgenTCS (React + Vite) + FastAPI, ver ADR-004.

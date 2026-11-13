@@ -80,7 +80,7 @@ prueba de equivalencia:
 | Capa | Implementación |
 |---|---|
 | Experiencia | **AgenTCS — Migration Studio** (React + Vite, `ui/`): ruta de migración, selector origen/destino, reglas con evidencia, aprobación HITL, vista lado a lado, pruebas y tablero. Habla con la **API FastAPI** (`copilot/api/`) usando los contratos (ADR-004) |
-| Orquestación | LangGraph con estado e `interrupt` para HITL |
+| Orquestación | **Motor de autocorrección** propio (`copilot/engine/`, ADR-005): extractor → casos → oráculo → bucle generar/compilar/comparar/retroalimentar con memoria de lecciones; el HITL lo gestionan la API y `RunState` |
 | Análisis estático | Adaptadores de origen (tree-sitter cuando hay gramática; segmentador genérico si no) + grafo (networkx) + métricas |
 | Conocimiento (RAG) | Una skill/carpeta por lenguaje: semántica, tipos, trampas; estándares por destino |
 | Verificación | Runners de origen y harness de destino en el contenedor; comparador neutral en Python |

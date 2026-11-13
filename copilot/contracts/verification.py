@@ -79,6 +79,7 @@ class VerificationReport(BaseModel):
     coverage_branches: float | None = None
     critical_findings: int | None = None
     max_complexity: int | None = None
+    similarity: float | None = None          # 0..1, métrica del motor de autocorrección (ADR-005)
     attempt: int = 1
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

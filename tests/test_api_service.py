@@ -105,12 +105,20 @@ def test_errors_have_actions(svc):
     assert e.value.code == "LANGUAGE_UNKNOWN"
 
 
-def test_real_mode_upload_is_sanitized_and_paths_stripped(svc):
+def test_real_mode_upload_is_sanitized_and_paths_stripped(tmp_path):
+    from copilot.engine.llm import LLMError
+
+    def no_engine():
+        raise LLMError("NO_API_KEY", "Sin llave.", "Configura ANTHROPIC_API_KEY.")
+
+    svc = CopilotService(store=RunStore(tmp_path), mode=RunMode.DEMO, background=False, engine_factory=no_engine)
     run = svc.create_run([("../../etc/PAGOS.cbl", b"       * PWD=abc123\n       PROCEDURE DIVISION.\n")],
                          "java", demo_mode=False)
     assert run.mode == RunMode.REAL and run.source_language == "cobol"
     assert run.files[0].path == "PAGOS.cbl" and "abc123" not in run.files[0].content
     assert run.phases[Phase.INGESTA].status == PhaseStatus.APROBADA
+    assert run.phases[Phase.ANALISIS].status == PhaseStatus.FALLIDA      # el motor falla con acción sugerida
+    assert "ANTHROPIC_API_KEY" in run.phases[Phase.ANALISIS].gate_message
 
 
 def test_package_not_ready(svc):

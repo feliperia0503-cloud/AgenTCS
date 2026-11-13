@@ -1,0 +1,5 @@
+id: python
+name: Python 3.12
+role: target
+extensions: [".py"]
+version: 0.1.0

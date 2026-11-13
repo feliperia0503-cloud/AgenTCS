@@ -14,7 +14,7 @@
 ## Roles (asignar nombres)
 | Rol | Responsabilidades | Criterios que más impacta |
 |---|---|---|
-| **A · Núcleo IA y adaptadores** | Contratos (Spec neutral, interfaces), LangGraph, agentes, extracción de reglas, packs de origen (parse/classify) y destino (scaffold/generación), autocorrección | 2, 3, 4 |
+| **A · Núcleo IA y adaptadores** | Contratos (Spec neutral, interfaces), motor de autocorrección (ADR-005), agentes, extracción de reglas, packs de origen (parse/classify) y destino (scaffold/generación), autocorrección | 2, 3, 4 |
 | **B · Verificación y plataforma** | Programas legacy de ejemplo por lenguaje + datos sintéticos, runners de origen (GnuCOBOL, Oracle Free), harness de destino, comparador neutral, niveles de oráculo, calidad/seguridad, Docker | **1**, 5, 8 |
 | **C · Experiencia, docs y pitch** | UI (wizard, vista comparativa, HITL, tablero), plantillas de documentación e informe ejecutivo, guion de demo, video de respaldo, prueba con usuario externo | 6, 7, 9, 10 |
 
@@ -33,7 +33,8 @@
 - [ ] **Hito 2:** PL/SQL → TypeScript con el **mismo núcleo** (solo adaptadores nuevos) pasa el 100%.
 
 ### Bloque 2 — Profundidad
-- [ ] A: LangGraph con `interrupt` para HITL; autocorrección; trazabilidad línea a línea; confianza por regla.
+- [x] A: motor de autocorrección (ADR-005) con HITL vía API, trazabilidad línea a línea y confianza por regla.
+- [ ] A: packs de origen (cobol con runner GnuCOBOL) y de destino (java) para el motor real.
 - [ ] B: casos borde + entrada inválida; cobertura ≥80/70; ArchUnit; Semgrep + gitleaks; enmascaramiento demostrable (poner un secreto falso en el COBOL y mostrar que se oculta).
 - [ ] C: conectar la UI al backend real; aprobación/ajuste de reglas; tablero de métricas.
 
