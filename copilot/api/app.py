@@ -108,6 +108,12 @@ def approve(run_id: str, body: Approval) -> RunState:
     return service.approve_spec(run_id, body.by)
 
 
+@app.post("/api/runs/{run_id}/expected")
+async def upload_expected(run_id: str, file: UploadFile = File(...)) -> dict:
+    """Oráculo nivel B: pares entrada/salida esperados (JSON). Antes de aprobar la especificación."""
+    return service.upload_expected(run_id, file.filename or "pares.json", await file.read())
+
+
 @app.get("/api/runs/{run_id}/verification")
 def verification(run_id: str) -> dict:
     return service.verification(run_id)
