@@ -1,0 +1,20 @@
+id: delphi
+name: Delphi / Object Pascal (Free Pascal)
+role: source
+extensions: [".pas", ".dpr", ".lpr", ".inc", ".pp"]
+aliases: [pascal]
+version: 0.1.0
+runner:
+  tools: [fpc]
+  include_args: ["-Fu{dir}", "-Fi{dir}"]
+  build: ["fpc", "-Mdelphi", "-v0", "{flags}", "{includes}", "-oagentcs_prog", "{entry}"]
+  run: ["./agentcs_prog"]
+  allowed_flags: ["-Sh", "-Cr", "-Co"]
+  harness_hint: |
+    - Se compila con Free Pascal en modo Delphi: escribe agentcs_driver.pas como `program agentcs_driver;`
+      con `uses SysUtils, <unit legacy>;` (fpc encuentra las units por -Fu automáticamente).
+    - Lee cada entrada con ReadLn en un string. Usa un TFormatSettings con DecimalSeparator := '.' para
+      StrToCurr/StrToFloat. Llama a la función/clase legacy SIN copiar su lógica.
+    - Imprime con WriteLn('@@campo=', CurrToStrF(v, ffFixed, <escala>, FS)) o FloatToStrF según el tipo;
+      errores: WriteLn('@@ERROR=', codigo, '|').
+    - Si la unit legacy depende de VCL (Forms, Dialogs, DB, Controls) no compilará aquí: explica la limitación en notes.

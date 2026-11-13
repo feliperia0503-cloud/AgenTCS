@@ -18,7 +18,7 @@ from copilot.contracts import Case, CaseOutput, LegacyRunner, OracleLevel, Phase
 from .llm import LLMClient, LLMError, complete_json
 from .prompts import ORACLE_SYSTEM
 from .pyharness import HarnessError, run_python_module
-from .sandbox import write_files
+from .sandbox import SandboxError, write_files
 
 
 @dataclass
@@ -33,13 +33,20 @@ class ReferenceResponse(BaseModel):
     code: str
 
 
-def _level_a(runner: LegacyRunner, spec: Spec, files: list[SourceFile], cases: list[Case], workdir: Path) -> OracleResult:
+def _level_a(runner: LegacyRunner, spec: Spec, files: list[SourceFile], cases: list[Case], workdir: Path,
+             llm: LLMClient | None) -> OracleResult:
+    if hasattr(runner, "bind"):          # runners genéricos: el LLM escribe el arnés del legacy
+        runner = runner.bind(llm)
     build = runner.build(files, workdir)
     if not build.ok:
-        raise LLMError("LEGACY_BUILD_FAILED", "El código legacy no compiló en el sandbox.",
+        raise LLMError("LEGACY_BUILD_FAILED", build.log or "El código legacy no compiló en el sandbox.",
                        "Revisa dependencias (copybooks, includes) o usa pares E/S (nivel B).")
-    return OracleResult(OracleLevel.A, "Legacy ejecutado en el sandbox (comportamiento real).",
-                        runner.run(spec, cases, workdir))
+    outputs = runner.run(spec, cases, workdir)
+    harness = runner.harness_code() if hasattr(runner, "harness_code") else None
+    attempts = getattr(runner, "attempts", 0)
+    detail = f" Arnés de ejecución generado y verificado en {attempts} intento(s)." if attempts else ""
+    return OracleResult(OracleLevel.A, "Legacy ejecutado en el sandbox sin modificar (comportamiento real)." + detail,
+                        outputs, harness)
 
 
 def _level_b(provided: list[CaseOutput], cases: list[Case]) -> OracleResult:
@@ -71,12 +78,22 @@ def _level_c(llm: LLMClient, spec: Spec, cases: list[Case], workdir: Path) -> Or
 def compute_expected(spec: Spec, cases: list[Case], *, workdir: Path, llm: LLMClient | None = None,
                      runner: LegacyRunner | None = None, files: list[SourceFile] | None = None,
                      provided: list[CaseOutput] | None = None) -> OracleResult:
+    """Nivel A si el legacy se puede ejecutar; si no, B (pares provistos) o C, declarando por qué."""
     workdir.mkdir(parents=True, exist_ok=True)
+    fallback = ""
     if runner is not None and files:
-        return _level_a(runner, spec, files, cases, workdir)
+        try:
+            return _level_a(runner, spec, files, cases, workdir / "legacy", llm)
+        except (LLMError, HarnessError, SandboxError, OSError, ValueError) as exc:
+            reason = exc.message if isinstance(exc, LLMError) else f"{type(exc).__name__}: {str(exc)[:300]}"
+            fallback = f"Nivel A no disponible ({reason}). "
     if provided:
-        return _level_b(provided, cases)
-    if llm is None:
+        result = _level_b(provided, cases)
+    elif llm is None:
         raise LLMError("NO_ORACLE", "No hay forma de obtener resultados esperados.",
                        "Configura un pack de origen con runner, pares E/S o un LLM para la referencia.")
-    return _level_c(llm, spec, cases, workdir)
+    else:
+        result = _level_c(llm, spec, cases, workdir)
+    if fallback:
+        result.description = fallback + result.description
+    return result
